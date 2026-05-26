@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  qduoj-judge-server:
+    image: qduoj/judge-server:latest
+    container_name: onlinejudge-judge
+    ports:
+      - "8000:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      - JWT_SECRET=your-judge-server-secret
+      - MAX_TIME_LIMIT=10000
+      - MAX_MEMORY_LIMIT=1024
+    networks:
+      - judge-network
+
+networks:
+  judge-network:
+    driver: bridge
+
+volumes:
+  data:

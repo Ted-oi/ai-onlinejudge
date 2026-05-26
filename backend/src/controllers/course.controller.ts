@@ -1,0 +1,137 @@
+import { Request, Response, NextFunction } from 'express'
+import { query } from '../config/database'
+import { logger } from '../utils/logger'
+
+export const getCourses = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { category, search, page = 1, limit = 20 } = req.query
+
+    let queryText = 'SELECT * FROM courses WHERE 1=1'
+    const params: any[] = []
+    let paramCount = 1
+
+    if (category) {
+      queryText += ` AND category = $${paramCount++}`
+      params.push(category)
+    }
+
+    if (search) {
+      queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
+      params.push(`%${search}%`, `%${search}%`)
+    }
+
+    const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
+    queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+    params.push(parseInt(limit as string), offset)
+
+    const result = await query(queryText, params)
+
+    res.json({
+      success: true,
+      data: { courses: result.rows }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getCourseById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+
+    const result = await query('SELECT * FROM courses WHERE id = $1', [id])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '课程不存在' }
+      })
+    }
+
+    const materialsResult = await query(
+      'SELECT * FROM course_materials WHERE course_id = $1 ORDER BY order_index',
+      [id]
+    )
+
+    res.json({
+      success: true,
+      data: {
+        course: result.rows[0],
+        materials: materialsResult.rows
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const createCourse = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { title, description, category, instructor_id } = req.body
+
+    const result = await query(
+      `INSERT INTO courses (title, description, category, instructor_id)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [title, description, category, instructor_id]
+    )
+
+    res.status(201).json({
+      success: true,
+      data: { course: result.rows[0] }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateCourse = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+    const { title, description, category } = req.body
+
+    const result = await query(
+      `UPDATE courses
+       SET title = $1, description = $2, category = $3, updated_at = NOW()
+       WHERE id = $4
+       RETURNING *`,
+      [title, description, category, id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '课程不存在' }
+      })
+    }
+
+    res.json({
+      success: true,
+      data: { course: result.rows[0] }
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const deleteCourse = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+
+    const result = await query('DELETE FROM courses WHERE id = $1 RETURNING *', [id])
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: { message: '课程不存在' }
+      })
+    }
+
+    res.json({
+      success: true,
+      message: '删除成功'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
