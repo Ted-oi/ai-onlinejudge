@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Button, Typography, message } from 'antd'
+import { Card, Button, Typography, Select, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { problemService } from '../../services/problem.service'
 import { submissionService } from '../../services/submission.service'
@@ -112,19 +112,14 @@ if __name__ == "__main__":
           <Title level={3}>{problem?.title}</Title>
         </div>
 
-        <div style={{ marginBottom: 16 }}>
+        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
           <Typography.Text strong>选择编程语言：</Typography.Text>
-          <select
+          <Select
             value={language}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-            style={{ marginLeft: 8, padding: '4px 8px' }}
-          >
-            {languages.map((lang) => (
-              <option key={lang.value} value={lang.value}>
-                {lang.label}
-              </option>
-            ))}
-          </select>
+            onChange={handleLanguageChange}
+            style={{ width: 140 }}
+            options={languages}
+          />
         </div>
 
         <div style={{ height: '500px', marginBottom: 16 }}>

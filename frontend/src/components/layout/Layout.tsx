@@ -9,6 +9,7 @@ import {
   RobotOutlined,
   UserOutlined,
   LogoutOutlined,
+  CrownOutlined,
 } from '@ant-design/icons'
 
 const { Header, Content, Sider } = AntLayout
@@ -39,6 +40,11 @@ const Layout = () => {
       key: '/contests',
       icon: <TrophyOutlined />,
       label: '比赛',
+    },
+    {
+      key: '/leaderboard',
+      icon: <CrownOutlined />,
+      label: '排行榜',
     },
     {
       key: '/courses',

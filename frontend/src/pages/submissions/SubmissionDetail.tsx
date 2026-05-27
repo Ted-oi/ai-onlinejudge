@@ -1,30 +1,35 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Button, Tag, Typography, Space, message } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons'
+import { Card, Descriptions, Button, Tag, Typography, Space, message, Spin } from 'antd'
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
 
 const { Title, Text } = Typography
 
+const FINAL_STATUSES = ['accepted', 'wrong_answer', 'time_limit_exceeded', 'memory_limit_exceeded', 'runtime_error', 'compilation_error', 'system_error', 'error']
+
 const SubmissionDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [submission, setSubmission] = useState<any>(null)
   const [loading, setLoading] = useState(false)
-
-  useEffect(() => {
-    if (id) {
-      fetchSubmission()
-    }
-  }, [id])
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchSubmission = async () => {
     try {
       setLoading(true)
       const data = await submissionService.getSubmissionById(Number(id))
       setSubmission(data)
+
+      // Stop polling if status is final
+      if (FINAL_STATUSES.includes(data.status)) {
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current)
+          pollingRef.current = null
+        }
+      }
     } catch (error) {
       message.error('获取提交详情失败')
     } finally {
@@ -32,8 +37,27 @@ const SubmissionDetail = () => {
     }
   }
 
+  useEffect(() => {
+    if (id) {
+      fetchSubmission()
+    }
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+      }
+    }
+  }, [id])
+
+  // Start polling when submission is in a non-final state
+  useEffect(() => {
+    if (submission && !FINAL_STATUSES.includes(submission.status) && !pollingRef.current) {
+      pollingRef.current = setInterval(fetchSubmission, 1500)
+    }
+  }, [submission?.status])
+
   if (!submission) {
-    return <div>加载中...</div>
+    return <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载中..." /></div>
   }
 
   const statusConfig: any = {
@@ -43,8 +67,10 @@ const SubmissionDetail = () => {
     memory_limit_exceeded: { color: 'warning', text: '内存超限' },
     runtime_error: { color: 'error', text: '运行时错误' },
     compilation_error: { color: 'error', text: '编译错误' },
-    pending: { color: 'processing', text: '评测中' },
-    judging: { color: 'processing', text: '评测中' },
+    system_error: { color: 'error', text: '系统错误' },
+    error: { color: 'error', text: '错误' },
+    pending: { color: 'processing', icon: <LoadingOutlined />, text: '等待评测' },
+    judging: { color: 'processing', icon: <LoadingOutlined />, text: '评测中' },
   }
 
   const config = statusConfig[submission.status] || { color: 'default', text: submission.status }
@@ -85,14 +111,14 @@ const SubmissionDetail = () => {
           <Descriptions.Item label="编程语言">
             {getLanguageName(submission.language)}
           </Descriptions.Item>
-          {submission.runtime && (
+          {submission.runtime != null && (
             <Descriptions.Item label="运行时间">
               {submission.runtime}ms
             </Descriptions.Item>
           )}
-          {submission.memory && (
+          {submission.memory != null && (
             <Descriptions.Item label="内存使用">
-              {submission.memory}MB
+              {submission.memory}KB
             </Descriptions.Item>
           )}
           <Descriptions.Item label="提交时间">

@@ -1,6 +1,20 @@
 import api from './api'
 import type { Contest, ContestDetail, ContestQuery, CreateContestDTO } from '../types/contest'
 
+export interface StandingEntry {
+  user_id: number
+  username: string
+  avatar: string | null
+  solved: number
+  time: number
+  problems: Record<number, { solved: boolean; attempts: number; time: number | null }>
+}
+
+export interface StandingsData {
+  standings: StandingEntry[]
+  problems: number[]
+}
+
 const contestService = {
   getContests: async (query?: ContestQuery): Promise<Contest[]> => {
     const response = await api.get('/contests', { params: query })
@@ -29,6 +43,11 @@ const contestService = {
 
   registerForContest: async (contestId: number, userId: number): Promise<void> => {
     await api.post(`/contests/${contestId}/register`, { user_id: userId })
+  },
+
+  getStandings: async (contestId: number): Promise<StandingsData> => {
+    const response = await api.get(`/contests/${contestId}/standings`)
+    return response.data.data
   },
 }
 

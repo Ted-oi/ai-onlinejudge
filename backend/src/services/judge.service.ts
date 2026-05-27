@@ -1,83 +1,208 @@
 import axios from 'axios'
+import crypto from 'crypto'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { localJudge, isLocalJudgeAvailable } from './localJudge'
 
 const JUDGE_SERVER_URL = process.env.JUDGE_SERVER_URL || 'http://localhost:8000'
-const JUDGE_SERVER_TOKEN = process.env.JUDGE_SERVER_TOKEN || 'your-judge-server-token'
+const JUDGE_SERVER_TOKEN = process.env.JUDGE_SERVER_TOKEN || 'onlinejudge-judge-secret-2024'
 
-export interface JudgeRequest {
-  source_code: string
-  language_id: number
-  max_time: number
-  max_memory: number
-  test_cases: Array<{
-    input: string
-    output: string
-  }>
+const judgeHeaders = {
+  'Content-Type': 'application/json',
+  'X-Judge-Server-Token': crypto.createHash('sha256').update(JUDGE_SERVER_TOKEN).digest('hex'),
 }
 
-export interface JudgeResponse {
-  submission_id: string
+const LANGUAGE_CONFIGS: Record<string, any> = {
+  c: {
+    compile: {
+      src_name: 'main.c',
+      exe_name: 'main',
+      max_cpu_time: 3000,
+      max_real_time: 5000,
+      max_memory: 128 * 1024 * 1024,
+      compile_command: '/usr/bin/gcc -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c99 {src_path} -lm -o {exe_path}',
+    },
+    run: {
+      command: '{exe_path}',
+      seccomp_rule: 'c_cpp',
+      env: ['LANG=en_US.UTF-8', 'LANGUAGE=en_US:en', 'LC_ALL=en_US.UTF-8'],
+    },
+  },
+  cpp: {
+    compile: {
+      src_name: 'main.cpp',
+      exe_name: 'main',
+      max_cpu_time: 3000,
+      max_real_time: 5000,
+      max_memory: 128 * 1024 * 1024,
+      compile_command: '/usr/bin/g++ -DONLINE_JUDGE -O2 -w -fmax-errors=3 -std=c++11 {src_path} -lm -o {exe_path}',
+    },
+    run: {
+      command: '{exe_path}',
+      seccomp_rule: 'c_cpp',
+      env: ['LANG=en_US.UTF-8', 'LANGUAGE=en_US:en', 'LC_ALL=en_US.UTF-8'],
+    },
+  },
+  java: {
+    compile: {
+      src_name: 'Main.java',
+      exe_name: 'Main',
+      max_cpu_time: 3000,
+      max_real_time: 5000,
+      max_memory: -1,
+      compile_command: '/usr/bin/javac {src_path} -d {exe_dir} -encoding UTF8',
+    },
+    run: {
+      command: '/usr/bin/java -cp {exe_dir} -XX:MaxRAM={max_memory}k -Djava.security.manager -Dfile.encoding=UTF-8 -Djava.security.policy==/etc/java_policy -Djava.awt.headless=true Main',
+      seccomp_rule: null,
+      env: ['LANG=en_US.UTF-8', 'LANGUAGE=en_US:en', 'LC_ALL=en_US.UTF-8'],
+      memory_limit_check_only: 1,
+    },
+  },
+  python: {
+    compile: {
+      src_name: 'solution.py',
+      exe_name: '__pycache__/solution.cpython-36.pyc',
+      max_cpu_time: 3000,
+      max_real_time: 5000,
+      max_memory: 128 * 1024 * 1024,
+      compile_command: '/usr/bin/python3 -m py_compile {src_path}',
+    },
+    run: {
+      command: '/usr/bin/python3 {exe_path}',
+      seccomp_rule: 'general',
+      env: ['PYTHONIOENCODING=UTF-8', 'LANG=en_US.UTF-8', 'LANGUAGE=en_US:en', 'LC_ALL=en_US.UTF-8'],
+    },
+  },
+}
+
+const RESULT_ACCEPTED = 0
+const RESULT_WRONG_ANSWER = -1
+const RESULT_CPU_TIME_LIMIT_EXCEEDED = 1
+const RESULT_REAL_TIME_LIMIT_EXCEEDED = 2
+const RESULT_MEMORY_LIMIT_EXCEEDED = 3
+const RESULT_RUNTIME_ERROR = 4
+const RESULT_SYSTEM_ERROR = -2
+const RESULT_COMPILATION_ERROR = -3
+
+function mapResult(resultId: number): string {
+  switch (resultId) {
+    case RESULT_ACCEPTED: return 'accepted'
+    case RESULT_WRONG_ANSWER: return 'wrong_answer'
+    case RESULT_CPU_TIME_LIMIT_EXCEEDED:
+    case RESULT_REAL_TIME_LIMIT_EXCEEDED: return 'time_limit_exceeded'
+    case RESULT_MEMORY_LIMIT_EXCEEDED: return 'memory_limit_exceeded'
+    case RESULT_RUNTIME_ERROR: return 'runtime_error'
+    case RESULT_COMPILATION_ERROR: return 'compilation_error'
+    case RESULT_SYSTEM_ERROR:
+    default: return 'system_error'
+  }
+}
+
+async function remoteJudge(
+  src: string,
+  language: string,
+  maxCpuTime: number,
+  maxMemory: number,
+  testCases: Array<{ input: string; output: string }>
+): Promise<{
   status: string
-  runtime: number
-  memory: number
-  error_message?: string
+  runtime: number | null
+  memory: number | null
+  errorMessage: string | null
+}> {
+  const languageConfig = LANGUAGE_CONFIGS[language.toLowerCase()]
+  if (!languageConfig) {
+    return { status: 'compilation_error', runtime: null, memory: null, errorMessage: `不支持的语言: ${language}` }
+  }
+
+  const response = await axios.post(
+    `${JUDGE_SERVER_URL}/judge`,
+    {
+      language_config: languageConfig,
+      src,
+      max_cpu_time: maxCpuTime,
+      max_memory: maxMemory * 1024 * 1024,
+      test_case: testCases.map((tc) => ({
+        input: tc.input.endsWith('\n') ? tc.input : tc.input + '\n',
+        output: tc.output.endsWith('\n') ? tc.output : tc.output + '\n',
+      })),
+      output: false,
+    },
+    { headers: judgeHeaders, timeout: 30000 }
+  )
+
+  const data = response.data
+  if (data.error) {
+    return { status: 'system_error', runtime: null, memory: null, errorMessage: data.message || '评测系统错误' }
+  }
+
+  const results: any[] = data.data || data
+  if (!Array.isArray(results) || results.length === 0) {
+    return { status: 'system_error', runtime: null, memory: null, errorMessage: '评测结果为空' }
+  }
+
+  let worstStatus = RESULT_ACCEPTED
+  let peakRuntime = 0
+  let peakMemory = 0
+  let errorMessage: string | null = null
+
+  for (const result of results) {
+    const resultId = result.result || result.code || 0
+    if (resultId !== RESULT_ACCEPTED && (worstStatus === RESULT_ACCEPTED || resultId < worstStatus)) {
+      worstStatus = resultId
+      if (resultId === RESULT_COMPILATION_ERROR && result.stderr) {
+        errorMessage = result.stderr
+      }
+    }
+    if (result.cpu_time) peakRuntime = Math.max(peakRuntime, result.cpu_time)
+    if (result.memory) peakMemory = Math.max(peakMemory, result.memory)
+  }
+
+  return {
+    status: mapResult(worstStatus),
+    runtime: peakRuntime > 0 ? peakRuntime : null,
+    memory: peakMemory > 0 ? Math.round(peakMemory / 1024) : null,
+    errorMessage,
+  }
 }
 
 export const judgeService = {
-  async submitCode(request: JudgeRequest): Promise<JudgeResponse> {
+  async ping(): Promise<boolean> {
+    if (isLocalJudgeAvailable('cpp')) return true
     try {
-      const response = await axios.post(
-        `${JUDGE_SERVER_URL}/api/submissions`,
-        request,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${JUDGE_SERVER_TOKEN}`,
-          },
-        }
-      )
-      return response.data
-    } catch (error) {
-      logger.error('Judge service error', error)
-      throw new Error('评测服务不可用')
+      const resp = await axios.post(`${JUDGE_SERVER_URL}/ping`, null, { headers: judgeHeaders })
+      return resp.data && !resp.data.error
+    } catch {
+      return false
     }
   },
 
-  async getSubmissionStatus(submissionId: string): Promise<JudgeResponse> {
+  async judgeCode(
+    src: string,
+    language: string,
+    maxCpuTime: number,
+    maxMemory: number,
+    testCases: Array<{ input: string; output: string }>
+  ): Promise<{
+    status: string
+    runtime: number | null
+    memory: number | null
+    errorMessage: string | null
+  }> {
+    const lang = language.toLowerCase()
+    if (isLocalJudgeAvailable(lang)) {
+      logger.info(`Using local judge for language: ${lang}`)
+      return localJudge(src, language, maxCpuTime, maxMemory, testCases)
+    }
+
+    logger.info(`Local judge unavailable for ${lang}, trying remote judge-server`)
     try {
-      const response = await axios.get(
-        `${JUDGE_SERVER_URL}/api/submissions/${submissionId}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${JUDGE_SERVER_TOKEN}`,
-          },
-        }
-      )
-      return response.data
-    } catch (error) {
-      logger.error('Judge service error', error)
-      throw new Error('评测服务不可用')
+      return await remoteJudge(src, language, maxCpuTime, maxMemory, testCases)
+    } catch (error: any) {
+      logger.error('Remote judge service error', error.message || error)
+      return { status: 'system_error', runtime: null, memory: null, errorMessage: '评测服务不可用，请稍后重试' }
     }
-  },
-
-  async getProblemTestCases(problemId: number) {
-    const result = await query(
-      'SELECT input, output FROM test_cases WHERE problem_id = $1 AND is_sample = false ORDER BY id',
-      [problemId]
-    )
-    return result.rows
-  },
-
-  languageToId(language: string): number {
-    const languageMap: any = {
-      'c': 1,
-      'cpp': 2,
-      'java': 3,
-      'python': 4,
-      'python3': 4,
-    }
-    return languageMap[language.toLowerCase()] || 2
   },
 
   async processSubmission(submissionId: number) {
@@ -94,79 +219,96 @@ export const judgeService = {
       const submission = submissionResult.rows[0]
 
       await query(
-        'UPDATE submissions SET status = $1 WHERE id = $2',
+        'UPDATE submissions SET status = $1, updated_at = NOW() WHERE id = $2',
         ['judging', submissionId]
       )
 
-      const testCases = await this.getProblemTestCases(submission.problem_id)
+      const problemResult = await query(
+        'SELECT time_limit, memory_limit FROM problems WHERE id = $1',
+        [submission.problem_id]
+      )
 
-      if (testCases.length === 0) {
+      if (problemResult.rows.length === 0) {
         await query(
-          'UPDATE submissions SET status = $1, error_message = $2 WHERE id = $3',
+          'UPDATE submissions SET status = $1, error_message = $2, updated_at = NOW() WHERE id = $3',
+          ['error', '题目不存在', submissionId]
+        )
+        return
+      }
+
+      const problem = problemResult.rows[0]
+
+      // Get test cases
+      const testCases = await query(
+        'SELECT input, output FROM test_cases WHERE problem_id = $1 ORDER BY id',
+        [submission.problem_id]
+      )
+
+      let cases = testCases.rows
+      if (cases.length === 0) {
+        const examplesResult = await query(
+          'SELECT examples FROM problems WHERE id = $1',
+          [submission.problem_id]
+        )
+        cases = examplesResult.rows[0]?.examples || []
+      }
+
+      if (cases.length === 0) {
+        await query(
+          'UPDATE submissions SET status = $1, error_message = $2, updated_at = NOW() WHERE id = $3',
           ['error', '没有测试用例', submissionId]
         )
         return
       }
 
-      const judgeRequest: JudgeRequest = {
-        source_code: submission.code,
-        language_id: this.languageToId(submission.language),
-        max_time: 1000,
-        max_memory: 256,
-        test_cases: testCases.map((tc: any) => ({
-          input: tc.input,
-          output: tc.output,
-        })),
-      }
-
-      const judgeResult = await this.submitCode(judgeRequest)
-
-      const statusMap: any = {
-        'AC': 'accepted',
-        'WA': 'wrong_answer',
-        'TLE': 'time_limit_exceeded',
-        'MLE': 'memory_limit_exceeded',
-        'RE': 'runtime_error',
-        'CE': 'compilation_error',
-      }
+      const judgeResult = await judgeService.judgeCode(
+        submission.code,
+        submission.language,
+        problem.time_limit || 1000,
+        problem.memory_limit || 256,
+        cases
+      )
 
       await query(
         `UPDATE submissions
          SET status = $1, runtime = $2, memory = $3, error_message = $4, updated_at = NOW()
          WHERE id = $5`,
-        [
-          statusMap[judgeResult.status] || 'error',
-          judgeResult.runtime || null,
-          judgeResult.memory || null,
-          judgeResult.error_message || null,
-          submissionId,
-        ]
+        [judgeResult.status, judgeResult.runtime, judgeResult.memory, judgeResult.errorMessage, submissionId]
       )
 
-      if (judgeResult.status === 'AC') {
+      await judgeService.updateUserStats(submission.user_id, judgeResult.status)
+    } catch (error: any) {
+      logger.error('Process submission error', error)
+      await query(
+        'UPDATE submissions SET status = $1, error_message = $2, updated_at = NOW() WHERE id = $3',
+        ['system_error', '评测失败: ' + (error.message || '未知错误'), submissionId]
+      )
+    }
+  },
+
+  async updateUserStats(userId: number, status: string) {
+    try {
+      if (status === 'accepted') {
         await query(
           `UPDATE users
-           SET solved_count = solved_count + 1,
+           SET submit_count = submit_count + 1,
+               solved_count = solved_count + 1,
                rating = rating + 10,
                updated_at = NOW()
            WHERE id = $1`,
-          [submission.user_id]
+          [userId]
+        )
+      } else {
+        await query(
+          `UPDATE users
+           SET submit_count = submit_count + 1,
+               updated_at = NOW()
+           WHERE id = $1`,
+          [userId]
         )
       }
-
-      await query(
-        `UPDATE users
-         SET submit_count = submit_count + 1,
-             updated_at = NOW()
-         WHERE id = $1`,
-        [submission.user_id]
-      )
     } catch (error) {
-      logger.error('Process submission error', error)
-      await query(
-        'UPDATE submissions SET status = $1, error_message = $2 WHERE id = $3',
-        ['error', '评测失败', submissionId]
-      )
+      logger.error('Update user stats error', error)
     }
   },
 }

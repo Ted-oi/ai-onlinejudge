@@ -14,6 +14,7 @@ import CourseList from './pages/courses/CourseList'
 import CourseDetail from './pages/courses/CourseDetail'
 import ContestList from './pages/contests/ContestList'
 import ContestDetail from './pages/contests/ContestDetail'
+import Leaderboard from './pages/leaderboard/Leaderboard'
 import AiChat from './pages/ai/AiChat'
 import UserProfile from './pages/user/UserProfile'
 import UserSettings from './pages/user/UserSettings'
@@ -50,6 +51,7 @@ function App() {
             <Route path="submissions/:id" element={<SubmissionDetail />} />
             <Route path="courses" element={<CourseList />} />
             <Route path="courses/:id" element={<CourseDetail />} />
+            <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="contests" element={<ContestList />} />
             <Route path="contests/:id" element={<ContestDetail />} />
             <Route path="ai" element={<AiChat />} />

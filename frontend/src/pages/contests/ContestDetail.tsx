@@ -1,25 +1,68 @@
-import { useState, useEffect } from 'react'
-import { Card, Typography, Tag, Button, Table, Space, Spin, message } from 'antd'
+import { useState, useEffect, useCallback } from 'react'
+import { Card, Typography, Tag, Button, Table, Space, Spin, Tabs, Avatar, message } from 'antd'
 import { ArrowLeftOutlined, TrophyOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import contestService from '../../services/contest.service'
+import type { StandingEntry } from '../../services/contest.service'
 import { problemService } from '../../services/problem.service'
 import type { ContestDetail } from '../../types/contest'
 import type { Problem } from '../../types'
 
 const { Title, Text, Paragraph } = Typography
 
+const formatDuration = (seconds: number) => {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+const formatPenalty = (seconds: number) => {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}`
+  return `${m} min`
+}
+
 const ContestDetail = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [contest, setContest] = useState<ContestDetail | null>(null)
   const [problems, setProblems] = useState<Problem[]>([])
+  const [standings, setStandings] = useState<StandingEntry[]>([])
+  const [standingsProblemIds, setStandingsProblemIds] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
+  const [standingsLoading, setStandingsLoading] = useState(false)
+  const [countdown, setCountdown] = useState('')
 
   useEffect(() => {
     fetchContest()
   }, [id])
+
+  const updateCountdown = useCallback(() => {
+    if (!contest) return
+    const now = dayjs()
+    const start = dayjs(contest.start_time)
+    const end = dayjs(contest.end_time)
+
+    if (now.isBefore(start)) {
+      const diff = start.diff(now, 'second')
+      setCountdown(`距离开始: ${formatDuration(diff)}`)
+    } else if (now.isBefore(end)) {
+      const diff = end.diff(now, 'second')
+      setCountdown(`剩余时间: ${formatDuration(diff)}`)
+    } else {
+      setCountdown('比赛已结束')
+    }
+  }, [contest])
+
+  useEffect(() => {
+    if (!contest) return
+    updateCountdown()
+    const timer = setInterval(updateCountdown, 1000)
+    return () => clearInterval(timer)
+  }, [contest, updateCountdown])
 
   const fetchContest = async () => {
     if (!id) return
@@ -37,6 +80,20 @@ const ContestDetail = () => {
       message.error('获取比赛详情失败')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchStandings = async () => {
+    if (!id) return
+    try {
+      setStandingsLoading(true)
+      const data = await contestService.getStandings(Number(id))
+      setStandings(data.standings)
+      setStandingsProblemIds(data.problems)
+    } catch {
+      message.error('获取排名失败')
+    } finally {
+      setStandingsLoading(false)
     }
   }
 
@@ -86,19 +143,75 @@ const ContestDetail = () => {
       key: 'difficulty',
       width: 100,
       render: (difficulty: string) => {
-        const colors: Record<string, string> = {
-          easy: 'green',
-          medium: 'orange',
-          hard: 'red',
-        }
-        const labels: Record<string, string> = {
-          easy: '简单',
-          medium: '中等',
-          hard: '困难',
-        }
+        const colors: Record<string, string> = { easy: 'green', medium: 'orange', hard: 'red' }
+        const labels: Record<string, string> = { easy: '简单', medium: '中等', hard: '困难' }
         return <Tag color={colors[difficulty]}>{labels[difficulty] || difficulty}</Tag>
       },
     },
+  ]
+
+  const standingsColumns = [
+    {
+      title: '排名',
+      key: 'rank',
+      width: 70,
+      render: (_: any, __: any, index: number) => {
+        if (index === 0) return <span style={{ color: '#ffd700', fontWeight: 'bold', fontSize: 18 }}>1</span>
+        if (index === 1) return <span style={{ color: '#c0c0c0', fontWeight: 'bold', fontSize: 16 }}>2</span>
+        if (index === 2) return <span style={{ color: '#cd7f32', fontWeight: 'bold', fontSize: 16 }}>3</span>
+        return index + 1
+      },
+    },
+    {
+      title: '用户',
+      key: 'user',
+      render: (_: any, record: StandingEntry) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate(`/users/${record.user_id}`)}>
+          <Avatar size="small" icon={<UserOutlined />} src={record.avatar} />
+          <span style={{ fontWeight: 500 }}>{record.username}</span>
+        </div>
+      ),
+    },
+    {
+      title: '解题数',
+      dataIndex: 'solved',
+      key: 'solved',
+      width: 80,
+      render: (solved: number) => (
+        <span style={{ color: solved > 0 ? '#52c41a' : undefined, fontWeight: 'bold' }}>
+          {solved}/{standingsProblemIds.length}
+        </span>
+      ),
+    },
+    {
+      title: '罚时',
+      dataIndex: 'time',
+      key: 'time',
+      width: 100,
+      render: (time: number) => <span>{formatPenalty(time)}</span>,
+    },
+    ...standingsProblemIds.map((pid, idx) => ({
+      title: String.fromCharCode(65 + idx),
+      key: `problem_${pid}`,
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, record: StandingEntry) => {
+        const stat = record.problems[pid]
+        if (!stat) return '-'
+        if (stat.solved) {
+          return (
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ color: '#52c41a', fontWeight: 'bold' }}>+{stat.attempts > 1 ? stat.attempts : ''}</div>
+              <div style={{ fontSize: 11, color: '#999' }}>{formatPenalty(stat.time || 0)}</div>
+            </div>
+          )
+        }
+        if (stat.attempts > 0) {
+          return <div style={{ color: '#ff4d4f', fontWeight: 'bold' }}>-{stat.attempts}</div>
+        }
+        return '-'
+      },
+    })),
   ]
 
   if (loading) {
@@ -119,6 +232,34 @@ const ContestDetail = () => {
       </Card>
     )
   }
+
+  const tabItems = [
+    {
+      key: 'problems',
+      label: '比赛题目',
+      children: problems.length > 0 ? (
+        <Table columns={problemColumns} dataSource={problems} rowKey="id" pagination={false} />
+      ) : (
+        <div style={{ textAlign: 'center', padding: '40px 0' }}>
+          <Text type="secondary">暂无题目</Text>
+        </div>
+      ),
+    },
+    {
+      key: 'standings',
+      label: '实时排名',
+      children: (
+        <Table
+          columns={standingsColumns}
+          dataSource={standings}
+          rowKey="user_id"
+          loading={standingsLoading}
+          pagination={false}
+          locale={{ emptyText: '暂无排名数据' }}
+        />
+      ),
+    },
+  ]
 
   return (
     <div>
@@ -148,9 +289,11 @@ const ContestDetail = () => {
               <Text type="secondary">
                 <ClockCircleOutlined /> 结束时间: {dayjs(contest.end_time).format('YYYY-MM-DD HH:mm:ss')}
               </Text>
-              <Text type="secondary">
-                <UserOutlined /> 创建者ID: {contest.creator_id}
-              </Text>
+              {countdown && (
+                <Text strong style={{ color: status.color === 'green' ? '#52c41a' : undefined }}>
+                  <ClockCircleOutlined /> {countdown}
+                </Text>
+              )}
             </Space>
           </div>
           {status.label !== '已结束' && (
@@ -161,19 +304,15 @@ const ContestDetail = () => {
         </div>
       </Card>
 
-      <Card title={<Title level={4} style={{ margin: 0 }}>比赛题目</Title>}>
-        {problems.length > 0 ? (
-          <Table
-            columns={problemColumns}
-            dataSource={problems}
-            rowKey="id"
-            pagination={false}
-          />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <Text type="secondary">暂无题目</Text>
-          </div>
-        )}
+      <Card>
+        <Tabs
+          items={tabItems}
+          onChange={(key) => {
+            if (key === 'standings' && standings.length === 0) {
+              fetchStandings()
+            }
+          }}
+        />
       </Card>
     </div>
   )

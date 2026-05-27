@@ -9,5 +9,6 @@ router.post('/', contestController.createContest)
 router.put('/:id', contestController.updateContest)
 router.delete('/:id', contestController.deleteContest)
 router.post('/:id/register', contestController.registerForContest)
+router.get('/:id/standings', contestController.getContestStandings)
 
 export default router

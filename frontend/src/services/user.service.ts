@@ -13,6 +13,11 @@ export interface UpdateUserDTO {
 }
 
 const userService = {
+  getLeaderboard: async (params?: { page?: number; limit?: number; role?: string; search?: string }): Promise<{ users: User[]; total: number }> => {
+    const response = await api.get('/users', { params })
+    return { users: response.data.data.users, total: response.data.data.users.length }
+  },
+
   getUserById: async (id: number): Promise<User> => {
     const response = await api.get(`/users/${id}`)
     return response.data.data.user

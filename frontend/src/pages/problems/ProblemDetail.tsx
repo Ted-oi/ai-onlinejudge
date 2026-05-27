@@ -7,6 +7,7 @@ import type { Problem } from '../../types'
 import ReactMarkdown from 'react-markdown'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
+import TestCaseManager from './TestCaseManager'
 
 const { Title } = Typography
 
@@ -15,6 +16,9 @@ const ProblemDetail = () => {
   const navigate = useNavigate()
   const [problem, setProblem] = useState<Problem | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const canManage = user.role === 'admin' || user.role === 'teacher'
 
   useEffect(() => {
     if (id) {
@@ -48,7 +52,6 @@ const ProblemDetail = () => {
     hard: 'red',
   }
 
-  // 确保examples字段是有效的数组，并处理可能的格式问题
   const examples = Array.isArray(problem.examples)
     ? problem.examples.filter((example: any) => example && example.input && example.output)
     : []
@@ -82,6 +85,44 @@ const ProblemDetail = () => {
     ),
   }))
 
+  const mainTabItems = [
+    {
+      key: 'detail',
+      label: '题目详情',
+      children: (
+        <>
+          <Descriptions column={2} bordered>
+            <Descriptions.Item label="时间限制">
+              {problem.time_limit}ms
+            </Descriptions.Item>
+            <Descriptions.Item label="内存限制">
+              {problem.memory_limit}MB
+            </Descriptions.Item>
+          </Descriptions>
+
+          <div style={{ marginTop: 24 }}>
+            <Title level={4}>题目描述</Title>
+            <ReactMarkdown>{problem.description}</ReactMarkdown>
+          </div>
+
+          <div style={{ marginTop: 24 }}>
+            <Title level={4}>示例</Title>
+            <Tabs items={exampleItems} />
+          </div>
+        </>
+      ),
+    },
+    ...(canManage
+      ? [
+          {
+            key: 'testcases',
+            label: '测试数据',
+            children: <TestCaseManager problemId={problem.id} />,
+          },
+        ]
+      : []),
+  ]
+
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
@@ -111,24 +152,7 @@ const ProblemDetail = () => {
           </Space>
         </div>
 
-        <Descriptions column={2} bordered>
-          <Descriptions.Item label="时间限制">
-            {problem.time_limit}ms
-          </Descriptions.Item>
-          <Descriptions.Item label="内存限制">
-            {problem.memory_limit}MB
-          </Descriptions.Item>
-        </Descriptions>
-
-        <div style={{ marginTop: 24 }}>
-          <Title level={4}>题目描述</Title>
-          <ReactMarkdown>{problem.description}</ReactMarkdown>
-        </div>
-
-        <div style={{ marginTop: 24 }}>
-          <Title level={4}>示例</Title>
-          <Tabs items={exampleItems} />
-        </div>
+        <Tabs items={mainTabItems} />
       </Card>
     </div>
   )

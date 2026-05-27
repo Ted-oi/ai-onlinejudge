@@ -12,6 +12,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./seed-data.sql:/docker-entrypoint-initdb.d/02-seed.sql
     networks:
       - onlinejudge-network
 
@@ -25,6 +27,20 @@ services:
     networks:
       - onlinejudge-network
 
+  judge-server:
+    image: qduoj/judge-server:latest
+    container_name: onlinejudge-judge
+    ports:
+      - "8000:8080"
+    volumes:
+      - judge_data:/data
+    environment:
+      - JWT_SECRET=onlinejudge-judge-secret-2024
+      - MAX_TIME_LIMIT=10000
+      - MAX_MEMORY_LIMIT=1024
+    networks:
+      - onlinejudge-network
+
   backend:
     build:
       context: ../backend
@@ -35,6 +51,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5000
+      DB_TYPE: postgres
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: onlinejudge
@@ -42,10 +59,13 @@ services:
       DB_PASSWORD: postgres
       REDIS_URL: redis://redis:6379
       JWT_SECRET: your-secret-key-change-in-production
+      JUDGE_SERVER_URL: http://judge-server:8080
+      JUDGE_SERVER_TOKEN: onlinejudge-judge-secret-2024
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
     depends_on:
       - postgres
       - redis
+      - judge-server
     networks:
       - onlinejudge-network
 
@@ -64,6 +84,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  judge_data:
 
 networks:
   onlinejudge-network:

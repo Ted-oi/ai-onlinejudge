@@ -1,9 +1,9 @@
+import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
-import dotenv from 'dotenv'
 import fs from 'fs'
 import path from 'path'
 import { logger } from './utils/logger'
@@ -17,10 +17,9 @@ import courseRoutes from './routes/course.routes'
 import userRoutes from './routes/user.routes'
 import contestRoutes from './routes/contest.routes'
 import lessonRoutes from './routes/lesson.routes'
+import testcaseRoutes from './routes/testcase.routes'
 import multer from 'multer'
 import { authenticate } from './middleware/auth.middleware'
-
-dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -82,6 +81,7 @@ app.use('/api/courses', courseRoutes)
 app.use('/api', lessonRoutes)  // 课次和资源路由
 app.use('/api/users', userRoutes)
 app.use('/api/contests', contestRoutes)
+app.use('/api/problems/:id/test-cases', testcaseRoutes)
 
 // 创建上传目录
 const uploadsDir = path.join(process.cwd(), 'uploads', 'courses')
