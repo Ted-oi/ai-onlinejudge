@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Row, Col, Card, Statistic, Button, Typography } from 'antd'
 import {
   CodeOutlined,
@@ -5,13 +6,33 @@ import {
   BookOutlined,
   RobotOutlined,
   ArrowRightOutlined,
+  SettingOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import { adminService } from '../../services/admin.service'
 
 const { Title, Paragraph } = Typography
 
 const Home = () => {
   const navigate = useNavigate()
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+
+  useEffect(() => {
+    loadStats()
+  }, [])
+
+  const loadStats = async () => {
+    try {
+      const data = await adminService.getPublicStats()
+      setStats(data)
+    } catch {
+      // use fallback values
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div>
@@ -46,7 +67,7 @@ const Home = () => {
           <Card>
             <Statistic
               title="题目总数"
-              value={1000}
+              value={loading ? '-' : (stats?.totalProblems || 0)}
               prefix={<CodeOutlined />}
               valueStyle={{ color: '#3f8600' }}
             />
@@ -56,7 +77,7 @@ const Home = () => {
           <Card>
             <Statistic
               title="用户总数"
-              value={5000}
+              value={loading ? '-' : (stats?.totalUsers || 0)}
               prefix={<TrophyOutlined />}
               valueStyle={{ color: '#cf1322' }}
             />
@@ -66,7 +87,7 @@ const Home = () => {
           <Card>
             <Statistic
               title="课程总数"
-              value={50}
+              value={loading ? '-' : (stats?.totalCourses || 0)}
               prefix={<BookOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -75,8 +96,8 @@ const Home = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="AI对话"
-              value={10000}
+              title="提交总数"
+              value={loading ? '-' : (stats?.totalSubmissions || 0)}
               prefix={<RobotOutlined />}
               valueStyle={{ color: '#722ed1' }}
             />
@@ -133,6 +154,24 @@ const Home = () => {
             </Button>
           </Card>
         </Col>
+        {(user.role === 'admin' || user.role === 'teacher') && (
+          <Col xs={24} md={8}>
+            <Card
+              title="管理后台"
+              extra={<SettingOutlined />}
+              hoverable
+              onClick={() => navigate('/admin')}
+              style={{ cursor: 'pointer' }}
+            >
+              <Paragraph>
+                管理题目、用户、竞赛和课程，查看系统统计数据
+              </Paragraph>
+              <Button type="link" icon={<ArrowRightOutlined />}>
+                进入管理
+              </Button>
+            </Card>
+          </Col>
+        )}
       </Row>
     </div>
   )

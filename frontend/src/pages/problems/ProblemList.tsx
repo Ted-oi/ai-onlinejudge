@@ -20,6 +20,7 @@ const ProblemList = () => {
   })
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const navigate = useNavigate()
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   const fetchProblems = async () => {
     try {
@@ -138,13 +139,15 @@ const ProblemList = () => {
     <div>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2}>题目列表</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/problems/create')}
-        >
-          添加题目
-        </Button>
+        {(user.role === 'admin' || user.role === 'teacher') && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/admin/problems/create')}
+          >
+            添加题目
+          </Button>
+        )}
       </div>
 
       {/* 筛选区域 */}

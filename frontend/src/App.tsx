@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import Layout from './components/layout/Layout'
+import AdminLayout from './components/layout/AdminLayout'
+import AdminRoute from './components/common/AdminRoute'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Home from './pages/home/Home'
@@ -18,8 +20,16 @@ import Leaderboard from './pages/leaderboard/Leaderboard'
 import AiChat from './pages/ai/AiChat'
 import UserProfile from './pages/user/UserProfile'
 import UserSettings from './pages/user/UserSettings'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminProblemList from './pages/admin/AdminProblemList'
+import AdminProblemForm from './pages/admin/AdminProblemForm'
+import AdminUserList from './pages/admin/AdminUserList'
+import AdminContestList from './pages/admin/AdminContestList'
+import AdminContestForm from './pages/admin/AdminContestForm'
+import AdminCourseList from './pages/admin/AdminCourseList'
+import AdminCourseForm from './pages/admin/AdminCourseForm'
+import AdminSubmissionList from './pages/admin/AdminSubmissionList'
 
-// 认证守卫组件
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token')
   if (!token) {
@@ -33,11 +43,9 @@ function App() {
     <ConfigProvider locale={zhCN}>
       <BrowserRouter>
         <Routes>
-          {/* 认证页面 */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* 主应用路由 */}
           <Route path="/" element={
             <ProtectedRoute>
               <Layout />
@@ -58,6 +66,27 @@ function App() {
             <Route path="users/:id" element={<UserProfile />} />
             <Route path="users/:id/settings" element={<UserSettings />} />
             <Route path="*" element={<Home />} />
+          </Route>
+
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            </ProtectedRoute>
+          }>
+            <Route index element={<AdminDashboard />} />
+            <Route path="problems" element={<AdminProblemList />} />
+            <Route path="problems/create" element={<AdminProblemForm />} />
+            <Route path="problems/:id/edit" element={<AdminProblemForm />} />
+            <Route path="users" element={<AdminUserList />} />
+            <Route path="contests" element={<AdminContestList />} />
+            <Route path="contests/create" element={<AdminContestForm />} />
+            <Route path="contests/:id/edit" element={<AdminContestForm />} />
+            <Route path="courses" element={<AdminCourseList />} />
+            <Route path="courses/create" element={<AdminCourseForm />} />
+            <Route path="courses/:id/edit" element={<AdminCourseForm />} />
+            <Route path="submissions" element={<AdminSubmissionList />} />
           </Route>
         </Routes>
       </BrowserRouter>

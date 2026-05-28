@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Modal, Form, Input, Switch, Space, Tag, Popconfirm, message, Upload } from 'antd'
-import { PlusOutlined, DeleteOutlined, EditOutlined, UploadOutlined } from '@ant-design/icons'
+import { Table, Button, Modal, Form, Input, Switch, Space, Tag, Popconfirm, message, Upload, Card, Divider } from 'antd'
+import { PlusOutlined, DeleteOutlined, EditOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons'
 import api from '../../services/api'
 
 interface TestCase {
@@ -21,6 +21,7 @@ const TestCaseManager = ({ problemId }: Props) => {
   const [loading, setLoading] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCase, setEditingCase] = useState<TestCase | null>(null)
+  const [uploading, setUploading] = useState(false)
   const [form] = Form.useForm()
 
   useEffect(() => {
@@ -125,6 +126,28 @@ const TestCaseManager = ({ problemId }: Props) => {
     return false
   }
 
+  const handleFileUpload = async (files: File[]) => {
+    setUploading(true)
+    const formData = new FormData()
+    for (const file of files) {
+      formData.append('files', file)
+    }
+    try {
+      const res = await api.post(`/problems/${problemId}/test-cases/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 60000,
+      })
+      message.success(`成功导入 ${res.data.data.count} 个测试用例`)
+      fetchTestCases()
+    } catch (error: any) {
+      const msg = error.response?.data?.error?.message || '上传失败'
+      message.error(msg)
+    } finally {
+      setUploading(false)
+    }
+    return false
+  }
+
   const columns = [
     {
       title: '#',
@@ -181,10 +204,42 @@ const TestCaseManager = ({ problemId }: Props) => {
           添加测试用例
         </Button>
         <Upload accept=".txt,.in" showUploadList={false} beforeUpload={handleBatchImport}>
-          <Button icon={<UploadOutlined />}>批量导入</Button>
+          <Button icon={<UploadOutlined />}>文本导入</Button>
         </Upload>
         <Tag>共 {testCases.length} 个用例</Tag>
       </Space>
+
+      <Card
+        size="small"
+        style={{ marginBottom: 16, borderColor: '#1890ff' }}
+      >
+        <Upload.Dragger
+          multiple
+          accept=".in,.out,.ans,.zip"
+          showUploadList={false}
+          beforeUpload={(file, fileList) => {
+            // only trigger once for the batch
+            if (fileList.indexOf(file) === 0) {
+              handleFileUpload(fileList)
+            }
+            return false
+          }}
+          disabled={uploading}
+        >
+          <p style={{ marginBottom: 8 }}>
+            {uploading ? '上传中...' : <InboxOutlined style={{ fontSize: 32, color: '#1890ff' }} />}
+          </p>
+          <p style={{ marginBottom: 4 }}>
+            <strong>点击或拖拽上传测试数据文件</strong>
+          </p>
+          <p style={{ color: '#999', fontSize: 12, marginBottom: 0 }}>
+            支持 .in / .out / .ans 文件，或包含这些文件的 .zip 压缩包
+          </p>
+          <p style={{ color: '#999', fontSize: 12 }}>
+            文件名需配对：如 1.in + 1.out、data2.in + data2.out
+          </p>
+        </Upload.Dragger>
+      </Card>
 
       <Table
         columns={columns}

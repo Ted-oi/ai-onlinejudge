@@ -55,12 +55,12 @@ const Login = () => {
           size="large"
         >
           <Form.Item
-            name="email"
-            rules={[{ required: true, message: '请输入邮箱' }]}
+            name="account"
+            rules={[{ required: true, message: '请输入用户名或邮箱' }]}
           >
             <Input
               prefix={<UserOutlined />}
-              placeholder="邮箱"
+              placeholder="用户名 / 邮箱"
             />
           </Form.Item>
 

@@ -2,7 +2,7 @@ import api from './api'
 import { User } from '../types'
 
 export interface LoginData {
-  email: string
+  account: string
   password: string
 }
 

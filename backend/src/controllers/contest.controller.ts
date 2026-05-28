@@ -104,7 +104,7 @@ export const createContest = async (req: Request, res: Response, next: NextFunct
 export const updateContest = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const { title, description, start_time, end_time } = req.body
+    const { title, description, start_time, end_time, problem_ids } = req.body
 
     const result = await query(
       `UPDATE contests
@@ -119,6 +119,16 @@ export const updateContest = async (req: Request, res: Response, next: NextFunct
         success: false,
         error: { message: '比赛不存在' }
       })
+    }
+
+    if (problem_ids !== undefined) {
+      await query('DELETE FROM contest_problems WHERE contest_id = $1', [id])
+      for (let i = 0; i < problem_ids.length; i++) {
+        await query(
+          'INSERT INTO contest_problems (contest_id, problem_id, order_index) VALUES ($1, $2, $3)',
+          [id, problem_ids[i], i]
+        )
+      }
     }
 
     res.json({

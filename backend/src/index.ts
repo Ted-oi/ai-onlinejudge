@@ -18,8 +18,10 @@ import userRoutes from './routes/user.routes'
 import contestRoutes from './routes/contest.routes'
 import lessonRoutes from './routes/lesson.routes'
 import testcaseRoutes from './routes/testcase.routes'
+import adminRoutes from './routes/admin.routes'
+import * as adminController from './controllers/admin.controller'
 import multer from 'multer'
-import { authenticate } from './middleware/auth.middleware'
+import { authenticate, authorize } from './middleware/auth.middleware'
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -82,6 +84,27 @@ app.use('/api', lessonRoutes)  // 课次和资源路由
 app.use('/api/users', userRoutes)
 app.use('/api/contests', contestRoutes)
 app.use('/api/problems/:id/test-cases', testcaseRoutes)
+
+// 测试用例文件上传（.in/.out/.zip）
+const testcaseUpload = multer({
+  dest: 'uploads/temp',
+  limits: { fileSize: 50 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = file.originalname.toLowerCase()
+    if (ext.endsWith('.in') || ext.endsWith('.out') || ext.endsWith('.ans') || ext.endsWith('.zip')) {
+      cb(null, true)
+    } else {
+      cb(new Error('仅支持 .in / .out / .ans / .zip 文件'))
+    }
+  },
+})
+app.post('/api/problems/:id/test-cases/upload', authenticate, authorize('admin', 'teacher'), testcaseUpload.array('files', 100), (req, res, next) => {
+  import('./controllers/testcase.controller').then(tc => tc.uploadTestCases(req, res, next))
+})
+app.use('/api/admin', adminRoutes)
+
+// 公开统计接口
+app.get('/api/stats', adminController.getPublicStats)
 
 // 创建上传目录
 const uploadsDir = path.join(process.cwd(), 'uploads', 'courses')

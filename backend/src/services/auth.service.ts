@@ -16,10 +16,10 @@ export const registerUser = async (data: CreateUserDTO) => {
   return result.rows[0]
 }
 
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (account: string, password: string) => {
   const result = await query(
-    'SELECT * FROM users WHERE email = $1',
-    [email]
+    'SELECT * FROM users WHERE email = $1 OR username = $1',
+    [account]
   )
 
   if (result.rows.length === 0) {
