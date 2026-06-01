@@ -4,40 +4,38 @@ services:
   postgres:
     image: postgres:14-alpine
     container_name: onlinejudge-postgres
+    restart: always
     environment:
       POSTGRES_DB: onlinejudge
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/01-schema.sql
       - ./seed-data.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - onlinejudge-network
 
   redis:
     image: redis:7-alpine
     container_name: onlinejudge-redis
+    restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    networks:
-      - onlinejudge-network
-
-  judge-server:
-    image: qduoj/judge-server:latest
-    container_name: onlinejudge-judge
-    ports:
-      - "8000:8080"
-    volumes:
-      - judge_data:/data
-    environment:
-      - JWT_SECRET=onlinejudge-judge-secret-2024
-      - MAX_TIME_LIMIT=10000
-      - MAX_MEMORY_LIMIT=1024
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - onlinejudge-network
 
@@ -46,6 +44,7 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     container_name: onlinejudge-backend
+    restart: always
     ports:
       - "5000:5000"
     environment:
@@ -56,16 +55,15 @@ services:
       DB_PORT: 5432
       DB_NAME: onlinejudge
       DB_USER: postgres
-      DB_PASSWORD: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
       REDIS_URL: redis://redis:6379
-      JWT_SECRET: your-secret-key-change-in-production
-      JUDGE_SERVER_URL: http://judge-server:8080
-      JUDGE_SERVER_TOKEN: onlinejudge-judge-secret-2024
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-in-production}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
-      - postgres
-      - redis
-      - judge-server
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - onlinejudge-network
 
@@ -74,6 +72,7 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     container_name: onlinejudge-frontend
+    restart: always
     ports:
       - "80:80"
     depends_on:
@@ -84,7 +83,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  judge_data:
 
 networks:
   onlinejudge-network:
