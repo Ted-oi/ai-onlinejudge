@@ -179,7 +179,7 @@ export async function localJudge(
     }
 
     // Run test cases
-    let worstStatus = 'accepted'
+    let worstStatus: JudgeResult['status'] = 'accepted'
     let peakRuntime = 0
 
     for (const tc of testCases) {
