@@ -5,6 +5,7 @@ import { authenticate, authorize } from '../middleware/auth.middleware'
 const router = Router()
 
 router.get('/', authenticate, problemController.getProblems)
+router.get('/meta/tags', authenticate, problemController.getTags)
 router.get('/:id', authenticate, problemController.getProblemById)
 router.post('/', authenticate, authorize('admin', 'teacher'), problemController.createProblem)
 router.put('/:id', authenticate, authorize('admin', 'teacher'), problemController.updateProblem)

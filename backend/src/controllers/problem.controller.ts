@@ -4,7 +4,7 @@ import { logger } from '../utils/logger'
 
 export const getProblems = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { difficulty, category, search, page = 1, limit = 20 } = req.query
+    const { difficulty, category, tags, search, page = 1, limit = 20 } = req.query
 
     let queryText = 'SELECT * FROM problems WHERE 1=1'
     const params: any[] = []
@@ -18,6 +18,15 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     if (category) {
       queryText += ` AND categories @> $${paramCount++}::jsonb`
       params.push(JSON.stringify([category]))
+    }
+
+    // Support multiple tags: ?tags=dp,greedy,graph
+    if (tags) {
+      const tagList = String(tags).split(',').filter(t => t)
+      if (tagList.length > 0) {
+        queryText += ` AND categories @> $${paramCount++}::jsonb`
+        params.push(JSON.stringify(tagList))
+      }
     }
 
     if (search) {
@@ -41,6 +50,13 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     if (category) {
       countText += ` AND categories @> $${countParam++}::jsonb`
       countParams.push(JSON.stringify([category]))
+    }
+    if (tags) {
+      const tagList = String(tags).split(',').filter(t => t)
+      if (tagList.length > 0) {
+        countText += ` AND categories @> $${countParam++}::jsonb`
+        countParams.push(JSON.stringify(tagList))
+      }
     }
     if (search) {
       countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
@@ -212,6 +228,18 @@ export const checkFavorite = async (req: Request, res: Response, next: NextFunct
     )
 
     res.json({ success: true, data: { favorited: result.rows.length > 0 } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getTags = async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await query(
+      "SELECT DISTINCT jsonb_array_elements_text(categories) as tag FROM problems WHERE categories IS NOT NULL ORDER BY tag"
+    )
+    const tags = result.rows.map((r: any) => r.tag).filter(Boolean)
+    res.json({ success: true, data: { tags } })
   } catch (error) {
     next(error)
   }

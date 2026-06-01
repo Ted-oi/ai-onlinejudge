@@ -23,6 +23,8 @@ import notificationRoutes from './routes/notification.routes'
 import discussionRoutes from './routes/discussion.routes'
 import assignmentRoutes from './routes/assignment.routes'
 import * as adminController from './controllers/admin.controller'
+import * as plagiarismController from './controllers/plagiarism.controller'
+import * as importExportController from './controllers/problemImportExport.controller'
 import multer from 'multer'
 import { authenticate, authorize } from './middleware/auth.middleware'
 
@@ -93,6 +95,13 @@ app.use('/api/problems/:id/test-cases', testcaseRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/discussions', discussionRoutes)
 app.use('/api/assignments', assignmentRoutes)
+
+// Plagiarism detection
+app.post('/api/plagiarism/:problemId', authenticate, authorize('admin', 'teacher'), plagiarismController.checkPlagiarism)
+
+// Problem import/export
+app.get('/api/problems-export', authenticate, authorize('admin', 'teacher'), importExportController.exportProblems)
+app.post('/api/problems-import', authenticate, authorize('admin', 'teacher'), importExportController.importProblems)
 
 // 测试用例文件上传（.in/.out/.zip）
 const testcaseUpload = multer({

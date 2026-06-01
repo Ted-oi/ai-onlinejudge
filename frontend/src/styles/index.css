@@ -44,4 +44,75 @@ body.dark-theme {
   .ant-layout-content > div {
     padding: 12px !important;
   }
+
+  /* Mobile table: make horizontal scroll */
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+
+  /* Stack filter cards */
+  .ant-card-body {
+    padding: 12px !important;
+  }
+
+  /* Responsive typography */
+  h2, .ant-typography h2 {
+    font-size: 20px !important;
+  }
+
+  /* Full-width inputs on mobile */
+  .ant-input,
+  .ant-select {
+    width: 100% !important;
+  }
+
+  /* Stack action buttons */
+  .ant-space-horizontal {
+    flex-wrap: wrap;
+  }
+
+  /* Make problem detail layout stack */
+  .problem-detail-grid {
+    flex-direction: column !important;
+  }
+
+  /* Contest/Course cards single column */
+  .ant-row {
+    flex-direction: column !important;
+  }
+  .ant-col {
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+
+  /* Hide less important table columns on mobile */
+  .ant-table-thead > tr > th:nth-child(n+5),
+  .ant-table-tbody > tr > td:nth-child(n+5) {
+    display: none;
+  }
+
+  /* Better mobile cards */
+  .ant-card-head-title {
+    font-size: 14px;
+  }
+
+  /* Responsive header */
+  .site-layout-header {
+    padding: 0 12px !important;
+  }
+
+  /* Show mobile menu button */
+  .mobile-menu-btn {
+    display: inline-flex !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .ant-layout-content > div {
+    padding: 8px !important;
+  }
+  .ant-btn {
+    font-size: 12px;
+    padding: 0 8px;
+  }
 }

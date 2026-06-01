@@ -4,6 +4,7 @@ import { Problem } from '../types'
 export interface ProblemQuery {
   difficulty?: string
   category?: string
+  tags?: string
   search?: string
   page?: number
   limit?: number
@@ -41,6 +42,28 @@ export const problemService = {
 
   checkFavorite: async (id: number): Promise<{ favorited: boolean }> => {
     const response = await api.get(`/problems/${id}/favorite`)
+    return response.data.data
+  },
+
+  getTags: async (): Promise<string[]> => {
+    const response = await api.get('/problems/meta/tags')
+    return response.data.data.tags
+  },
+
+  exportProblems: async (params?: { ids?: string; difficulty?: string; category?: string }): Promise<Blob> => {
+    const response = await api.get('/problems-export', { params, responseType: 'blob' })
+    return response.data
+  },
+
+  importProblems: async (problems: any[]): Promise<any> => {
+    const response = await api.post('/problems-import', { problems })
+    return response.data.data
+  },
+
+  checkPlagiarism: async (problemId: number, minSimilarity?: number): Promise<any> => {
+    const response = await api.post(`/plagiarism/${problemId}`, null, {
+      params: { min_similarity: minSimilarity || 0.5 }
+    })
     return response.data.data
   },
 }

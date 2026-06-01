@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Space } from 'antd'
+import { useState, useMemo } from 'react'
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Space, Button } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   HomeOutlined,
@@ -11,6 +11,7 @@ import {
   LogoutOutlined,
   CrownOutlined,
   SettingOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher from '../common/ThemeSwitcher'
@@ -21,7 +22,9 @@ const Layout = () => {
   const [collapsed, setCollapsed] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
+  }, [])
 
   const menuItems = [
     { key: '/', icon: <HomeOutlined />, label: '首页' },
@@ -70,8 +73,14 @@ const Layout = () => {
         <Header style={{
           padding: '0 24px', background: '#fff',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <div />
+        }} className="site-layout-header">
+          <Button
+            type="text"
+            icon={<MenuOutlined />}
+            onClick={() => setCollapsed(!collapsed)}
+            style={{ display: 'none' }}
+            className="mobile-menu-btn"
+          />
           <Space size={16}>
             <NotificationCenter />
             <ThemeSwitcher />
