@@ -33,8 +33,14 @@ export const createSubmission = async (req: Request, res: Response, next: NextFu
       )
     }
 
-    judgeService.processSubmission(submission.id).catch((err) => {
+    judgeService.processSubmission(submission.id).catch(async (err) => {
       logger.error('Background judging failed', { submissionId: submission.id, error: err })
+      try {
+        await query(
+          'UPDATE submissions SET status = $1, error_message = $2 WHERE id = $3',
+          ['system_error', `评测失败: ${err.message || '未知错误'}`, submission.id]
+        )
+      } catch (_) { /* ignore */ }
     })
 
     res.status(201).json({

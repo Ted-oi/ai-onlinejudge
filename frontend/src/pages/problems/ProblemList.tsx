@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { Table, Card, Input, Select, Button, Tag, Space, Typography, Tooltip, Divider } from 'antd'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Table, Card, Input, Select, Button, Tag, Space, Typography, Tooltip, Divider, message } from 'antd'
 import { SearchOutlined, PlusOutlined, AppstoreOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { problemService } from '../../services/problem.service'
@@ -19,13 +19,16 @@ const ProblemList = () => {
     category: '',
     search: '',
   })
+  const [searchInput, setSearchInput] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('')
   const navigate = useNavigate()
-  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  const user = useMemo(() => {
+    try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} }
+  }, [])
 
   const [allProblems, setAllProblems] = useState<Problem[]>([])
 
-  const fetchProblems = async () => {
+  const fetchProblems = useCallback(async () => {
     try {
       setLoading(true)
       const { problems: data, total } = await problemService.getProblems({
@@ -43,15 +46,23 @@ const ProblemList = () => {
         setAllProblems(processedData)
       }
     } catch (error) {
-      console.error('获取题目列表失败:', error)
+      message.error('获取题目列表失败，请稍后重试')
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters.category, filters.difficulty, filters.search])
 
   useEffect(() => {
     fetchProblems()
-  }, [filters])
+  }, [fetchProblems])
+
+  // Search debounce
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }))
+    }, 400)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   const handleCategoryClick = (categoryId: string) => {
     if (selectedCategory === categoryId) {
@@ -170,9 +181,10 @@ const ProblemList = () => {
           <Input
             placeholder="搜索题目"
             prefix={<SearchOutlined />}
-            value={filters.search}
-            onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             style={{ width: 200 }}
+            allowClear
           />
           <Select
             placeholder="选择难度"
