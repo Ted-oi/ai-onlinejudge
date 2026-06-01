@@ -16,9 +16,8 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     }
 
     if (category) {
-      // 支持按categories数组筛选
-      queryText += ` AND $${paramCount} = ANY(categories)`
-      params.push(category)
+      queryText += ` AND categories @> $${paramCount++}::jsonb`
+      params.push(JSON.stringify([category]))
     }
 
     if (search) {
@@ -31,6 +30,23 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     params.push(parseInt(limit as string), offset)
 
     const result = await query(queryText, params)
+
+    let countText = 'SELECT COUNT(*) as total FROM problems WHERE 1=1'
+    const countParams: any[] = []
+    let countParam = 1
+    if (difficulty) {
+      countText += ` AND difficulty = $${countParam++}`
+      countParams.push(difficulty)
+    }
+    if (category) {
+      countText += ` AND categories @> $${countParam++}::jsonb`
+      countParams.push(JSON.stringify([category]))
+    }
+    if (search) {
+      countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
+      countParams.push(`%${search}%`, `%${search}%`)
+    }
+    const countResult = await query(countText, countParams)
 
     // 深度修复examples字段的格式问题
     const problems = result.rows.map((problem: any) => {
@@ -48,7 +64,7 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
 
     res.json({
       success: true,
-      data: { problems }
+      data: { problems, total: parseInt(countResult.rows[0].total) }
     })
   } catch (error) {
     next(error)
@@ -155,6 +171,47 @@ export const deleteProblem = async (req: Request, res: Response, next: NextFunct
       success: true,
       message: '删除成功'
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const toggleFavorite = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+    const userId = (req as any).userId
+
+    const existing = await query(
+      'SELECT id FROM problem_favorites WHERE user_id = $1 AND problem_id = $2',
+      [userId, id]
+    )
+
+    if (existing.rows.length > 0) {
+      await query('DELETE FROM problem_favorites WHERE user_id = $1 AND problem_id = $2', [userId, id])
+      res.json({ success: true, data: { favorited: false } })
+    } else {
+      await query(
+        'INSERT INTO problem_favorites (user_id, problem_id) VALUES ($1, $2)',
+        [userId, id]
+      )
+      res.json({ success: true, data: { favorited: true } })
+    }
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const checkFavorite = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+    const userId = (req as any).userId
+
+    const result = await query(
+      'SELECT id FROM problem_favorites WHERE user_id = $1 AND problem_id = $2',
+      [userId, id]
+    )
+
+    res.json({ success: true, data: { favorited: result.rows.length > 0 } })
   } catch (error) {
     next(error)
   }

@@ -10,9 +10,9 @@ export interface ProblemQuery {
 }
 
 export const problemService = {
-  getProblems: async (query?: ProblemQuery): Promise<Problem[]> => {
+  getProblems: async (query?: ProblemQuery): Promise<{ problems: Problem[]; total: number }> => {
     const response = await api.get('/problems', { params: query })
-    return response.data.data.problems
+    return { problems: response.data.data.problems, total: response.data.data.total }
   },
 
   getProblemById: async (id: number): Promise<Problem> => {
@@ -32,5 +32,15 @@ export const problemService = {
 
   deleteProblem: async (id: number): Promise<void> => {
     await api.delete(`/problems/${id}`)
+  },
+
+  toggleFavorite: async (id: number): Promise<{ favorited: boolean }> => {
+    const response = await api.post(`/problems/${id}/favorite`)
+    return response.data.data
+  },
+
+  checkFavorite: async (id: number): Promise<{ favorited: boolean }> => {
+    const response = await api.get(`/problems/${id}/favorite`)
+    return response.data.data
   },
 }

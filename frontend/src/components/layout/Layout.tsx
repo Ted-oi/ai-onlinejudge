@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Avatar, Dropdown } from 'antd'
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Space } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   HomeOutlined,
@@ -12,6 +12,8 @@ import {
   CrownOutlined,
   SettingOutlined,
 } from '@ant-design/icons'
+import NotificationCenter from '../common/NotificationCenter'
+import ThemeSwitcher from '../common/ThemeSwitcher'
 
 const { Header, Content, Sider } = AntLayout
 
@@ -22,63 +24,21 @@ const Layout = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
   const menuItems = [
-    {
-      key: '/',
-      icon: <HomeOutlined />,
-      label: '首页',
-    },
-    {
-      key: '/problems',
-      icon: <CodeOutlined />,
-      label: '题目',
-    },
-    {
-      key: '/submissions',
-      icon: <CodeOutlined />,
-      label: '提交记录',
-    },
-    {
-      key: '/contests',
-      icon: <TrophyOutlined />,
-      label: '比赛',
-    },
-    {
-      key: '/leaderboard',
-      icon: <CrownOutlined />,
-      label: '排行榜',
-    },
-    {
-      key: '/courses',
-      icon: <BookOutlined />,
-      label: '课程',
-    },
-    {
-      key: '/ai',
-      icon: <RobotOutlined />,
-      label: 'AI助手',
-    },
+    { key: '/', icon: <HomeOutlined />, label: '首页' },
+    { key: '/problems', icon: <CodeOutlined />, label: '题目' },
+    { key: '/submissions', icon: <CodeOutlined />, label: '提交记录' },
+    { key: '/contests', icon: <TrophyOutlined />, label: '比赛' },
+    { key: '/leaderboard', icon: <CrownOutlined />, label: '排行榜' },
+    { key: '/courses', icon: <BookOutlined />, label: '课程' },
+    { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
     ...(user.role === 'admin' || user.role === 'teacher'
-      ? [{
-          key: '/admin',
-          icon: <SettingOutlined />,
-          label: '管理后台',
-        }]
+      ? [{ key: '/admin', icon: <SettingOutlined />, label: '管理后台' }]
       : []),
   ]
 
   const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人中心',
-      onClick: () => navigate(`/users/${user.id}`),
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-      onClick: handleLogout,
-    },
+    { key: 'profile', icon: <UserOutlined />, label: '个人中心', onClick: () => navigate(`/users/${user.id}`) },
+    { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: handleLogout },
   ]
 
   function handleLogout() {
@@ -89,25 +49,13 @@ const Layout = () => {
 
   return (
     <AntLayout style={{ minHeight: '100vh' }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={setCollapsed}
-        theme="dark"
-      >
-        <div
-          style={{
-            height: 32,
-            margin: 16,
-            background: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: 6,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-          }}
-        >
+      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed} theme="dark"
+        breakpoint="lg" collapsedWidth={0}>
+        <div style={{
+          height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', fontWeight: 'bold',
+        }}>
           {collapsed ? 'OJ' : 'AI OnlineJudge'}
         </div>
         <Menu
@@ -119,36 +67,24 @@ const Layout = () => {
         />
       </Sider>
       <AntLayout>
-        <Header
-          style={{
-            padding: '0 24px',
-            background: '#fff',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
+        <Header style={{
+          padding: '0 24px', background: '#fff',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        }}>
           <div />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Avatar
-                size="small"
-                icon={<UserOutlined />}
-                src={user.avatar}
-              />
-              <span>{user.username || '未登录'}</span>
-            </div>
-          </Dropdown>
+          <Space size={16}>
+            <NotificationCenter />
+            <ThemeSwitcher />
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+              <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Avatar size="small" icon={<UserOutlined />} src={user.avatar} />
+                <span>{user.username || '未登录'}</span>
+              </div>
+            </Dropdown>
+          </Space>
         </Header>
         <Content style={{ margin: '24px 16px 0' }}>
-          <div
-            style={{
-              padding: 24,
-              minHeight: 360,
-              background: '#fff',
-              borderRadius: 8,
-            }}
-          >
+          <div style={{ padding: 24, minHeight: 360, background: '#fff', borderRadius: 8 }}>
             <Outlet />
           </div>
         </Content>

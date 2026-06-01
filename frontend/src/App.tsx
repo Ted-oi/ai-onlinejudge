@@ -1,9 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ConfigProvider } from 'antd'
+import { ConfigProvider, theme as antTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import Layout from './components/layout/Layout'
 import AdminLayout from './components/layout/AdminLayout'
 import AdminRoute from './components/common/AdminRoute'
+import { ThemeProvider, useTheme } from './components/common/ThemeSwitcher'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Home from './pages/home/Home'
@@ -29,28 +30,37 @@ import AdminContestForm from './pages/admin/AdminContestForm'
 import AdminCourseList from './pages/admin/AdminCourseList'
 import AdminCourseForm from './pages/admin/AdminCourseForm'
 import AdminSubmissionList from './pages/admin/AdminSubmissionList'
+import DiscussionList from './pages/discussions/DiscussionList'
+import DiscussionDetail from './pages/discussions/DiscussionDetail'
+import AssignmentDetail from './pages/assignments/AssignmentDetail'
+import NotFoundPage from './components/common/NotFoundPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token')
-  if (!token) {
-    return <Navigate to="/login" replace />
-  }
+  if (!token) return <Navigate to="/login" replace />
   return <>{children}</>
 }
 
-function App() {
+function ThemedApp() {
+  const { theme } = useTheme()
+
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider
+      locale={zhCN}
+      theme={{
+        algorithm: theme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        token: {
+          colorPrimary: '#1890ff',
+          borderRadius: 6,
+        },
+      }}
+    >
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }>
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Home />} />
             <Route path="problems" element={<ProblemList />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
@@ -65,15 +75,14 @@ function App() {
             <Route path="ai" element={<AiChat />} />
             <Route path="users/:id" element={<UserProfile />} />
             <Route path="users/:id/settings" element={<UserSettings />} />
-            <Route path="*" element={<Home />} />
+            <Route path="discussions/problem/:problemId" element={<DiscussionList />} />
+            <Route path="discussions/thread/:id" element={<DiscussionDetail />} />
+            <Route path="assignments/:id" element={<AssignmentDetail />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminRoute>
-                <AdminLayout />
-              </AdminRoute>
-            </ProtectedRoute>
+            <ProtectedRoute><AdminRoute><AdminLayout /></AdminRoute></ProtectedRoute>
           }>
             <Route index element={<AdminDashboard />} />
             <Route path="problems" element={<AdminProblemList />} />
@@ -91,6 +100,14 @@ function App() {
         </Routes>
       </BrowserRouter>
     </ConfigProvider>
+  )
+}
+
+function App() {
+  return (
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
   )
 }
 

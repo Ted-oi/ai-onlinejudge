@@ -5,6 +5,8 @@ import { useParams, useNavigate } from 'react-router-dom'
 import userService from '../../services/user.service'
 import { submissionService } from '../../services/submission.service'
 import type { User } from '../../types'
+import SkillRadarChart from '../../components/user/SkillRadarChart'
+import ActivityHeatmap from '../../components/user/ActivityHeatmap'
 
 const { Title, Text } = Typography
 
@@ -235,7 +237,7 @@ const UserProfile = () => {
       )}
 
       {/* Recent submissions */}
-      <Card title="最近提交">
+      <Card title="最近提交" style={{ marginBottom: 16 }}>
         <Table
           columns={submissionColumns}
           dataSource={recentSubmissions}
@@ -244,6 +246,16 @@ const UserProfile = () => {
           size="small"
         />
       </Card>
+
+      {/* Skill radar and activity heatmap */}
+      <Row gutter={16}>
+        <Col xs={24} lg={12}>
+          <SkillRadarChart userId={Number(id)} />
+        </Col>
+        <Col xs={24} lg={12}>
+          <ActivityHeatmap userId={Number(id)} />
+        </Col>
+      </Row>
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOut
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
+import ErrorExplanation from '../../components/problems/ErrorExplanation'
 
 const { Title, Text } = Typography
 
@@ -106,7 +107,7 @@ const SubmissionDetail = () => {
 
         <Descriptions column={2} bordered>
           <Descriptions.Item label="提交ID">{submission.id}</Descriptions.Item>
-          <Descriptions.Item label="题目ID">{submission.problem_id}</Descriptions.Item>
+          <Descriptions.Item label="题目">{submission.problem_title || `P${String(submission.problem_id).padStart(4, '0')}`}</Descriptions.Item>
           <Descriptions.Item label="用户ID">{submission.user_id}</Descriptions.Item>
           <Descriptions.Item label="编程语言">
             {getLanguageName(submission.language)}
@@ -156,6 +157,10 @@ const SubmissionDetail = () => {
             </Button>
           </Space>
         </div>
+
+        {submission.status !== 'accepted' && FINAL_STATUSES.includes(submission.status) && (
+          <ErrorExplanation submissionId={submission.id} status={submission.status} />
+        )}
       </Card>
     </div>
   )

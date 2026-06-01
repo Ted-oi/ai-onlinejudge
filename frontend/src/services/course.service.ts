@@ -12,9 +12,9 @@ export const courseService = {
     return response.data.data.course
   },
 
-  getCourseWithLessons: async (id: number): Promise<Course & { lessons: Lesson[] }> => {
-    const response = await api.get(`/courses/${id}/details`)
-    return response.data.data
+  getCourseWithLessons: async (id: number): Promise<Course> => {
+    const response = await api.get(`/courses/${id}`)
+    return response.data.data.course
   },
 
   getCourseProgress: async (courseId: number): Promise<CourseProgress> => {
@@ -47,6 +47,10 @@ export const courseService = {
   createMaterial: async (data: any): Promise<CourseMaterial> => {
     const response = await api.post('/materials', data)
     return response.data.data.material
+  },
+
+  deleteMaterial: async (id: number): Promise<void> => {
+    await api.delete(`/materials/${id}`)
   },
 
   // 学习进度相关

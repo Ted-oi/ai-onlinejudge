@@ -26,7 +26,7 @@ const AdminContestForm = () => {
   const loadProblems = async () => {
     try {
       const data = await problemService.getProblems({ limit: 1000 })
-      setProblems(data || [])
+      setProblems(data.problems || [])
     } catch {
       // handled
     }

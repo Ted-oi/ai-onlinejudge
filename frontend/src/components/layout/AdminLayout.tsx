@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Avatar, Dropdown } from 'antd'
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Space } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -12,6 +12,8 @@ import {
   LogoutOutlined,
   ArrowLeftOutlined,
 } from '@ant-design/icons'
+import NotificationCenter from '../common/NotificationCenter'
+import ThemeSwitcher from '../common/ThemeSwitcher'
 
 const { Header, Content, Sider } = AntLayout
 
@@ -127,13 +129,17 @@ const AdminLayout = () => {
           <span style={{ fontSize: 16, fontWeight: 500, color: '#666' }}>
             管理后台
           </span>
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+          <Space size={16}>
+            <NotificationCenter />
+            <ThemeSwitcher />
+            <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
             <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Avatar size="small" icon={<UserOutlined />} />
               <span>{user.username}</span>
               <span style={{ fontSize: 12, color: '#999' }}>({user.role})</span>
             </div>
           </Dropdown>
+          </Space>
         </Header>
         <Content style={{ margin: '24px 16px 0' }}>
           <div style={{ padding: 24, minHeight: 360, background: '#fff', borderRadius: 8 }}>

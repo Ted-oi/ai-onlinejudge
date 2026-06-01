@@ -19,6 +19,9 @@ import contestRoutes from './routes/contest.routes'
 import lessonRoutes from './routes/lesson.routes'
 import testcaseRoutes from './routes/testcase.routes'
 import adminRoutes from './routes/admin.routes'
+import notificationRoutes from './routes/notification.routes'
+import discussionRoutes from './routes/discussion.routes'
+import assignmentRoutes from './routes/assignment.routes'
 import * as adminController from './controllers/admin.controller'
 import multer from 'multer'
 import { authenticate, authorize } from './middleware/auth.middleware'
@@ -66,6 +69,9 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(compression())
 
+// 静态文件服务：课程素材文件
+app.use('/api/materials/files', express.static(path.join(process.cwd(), 'uploads', 'courses')))
+
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`)
   next()
@@ -84,6 +90,9 @@ app.use('/api', lessonRoutes)  // 课次和资源路由
 app.use('/api/users', userRoutes)
 app.use('/api/contests', contestRoutes)
 app.use('/api/problems/:id/test-cases', testcaseRoutes)
+app.use('/api/notifications', notificationRoutes)
+app.use('/api/discussions', discussionRoutes)
+app.use('/api/assignments', assignmentRoutes)
 
 // 测试用例文件上传（.in/.out/.zip）
 const testcaseUpload = multer({

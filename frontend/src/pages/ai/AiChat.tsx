@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { Card, Input, Button, Typography, Space, Tabs, Select, message, Avatar, Spin } from 'antd'
 import { SendOutlined, RobotOutlined, UserOutlined, PlusOutlined, CodeOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 import { aiService } from '../../services/ai.service'
 import { problemService } from '../../services/problem.service'
 import type { ChatMessage } from '../../services/ai.service'
@@ -59,7 +62,7 @@ const AiChat = () => {
   const fetchProblems = async () => {
     try {
       const data = await problemService.getProblems()
-      setProblems(data)
+      setProblems(data.problems)
     } catch (error) {
       console.error('获取题目列表失败:', error)
     }
@@ -246,7 +249,7 @@ const AiChat = () => {
                   >
                     {msg.role === 'assistant' ? (
                       <div style={{ lineHeight: 1.6 }}>
-                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
                       <div style={{ lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{msg.content}</div>
@@ -333,7 +336,7 @@ const AiChat = () => {
               <Card title="分析结果" style={{ height: '100%' }} bodyStyle={{ overflowY: 'auto' }}>
                 {analysisResult ? (
                   <div style={{ lineHeight: 1.8 }}>
-                    <ReactMarkdown>{analysisResult}</ReactMarkdown>
+                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{analysisResult}</ReactMarkdown>
                   </div>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '40px 0' }}>

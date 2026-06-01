@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { localJudge, isLocalJudgeAvailable } from './localJudge'
+import { createNotification } from '../controllers/notification.controller'
 
 const JUDGE_SERVER_URL = process.env.JUDGE_SERVER_URL || 'http://localhost:8000'
 const JUDGE_SERVER_TOKEN = process.env.JUDGE_SERVER_TOKEN || 'onlinejudge-judge-secret-2024'
@@ -277,6 +278,25 @@ export const judgeService = {
       )
 
       await judgeService.updateUserStats(submission.user_id, judgeResult.status)
+
+      const problemResult2 = await query('SELECT title FROM problems WHERE id = $1', [submission.problem_id])
+      const problemTitle = problemResult2.rows[0]?.title || '未知题目'
+
+      if (judgeResult.status === 'accepted') {
+        createNotification(submission.user_id, 'submission_result', '提交通过',
+          `你提交的题目「${problemTitle}」已通过评测！`, `/submissions/${submissionId}`)
+      } else {
+        const statusMap: Record<string, string> = {
+          wrong_answer: '答案错误', time_limit_exceeded: '超时',
+          memory_limit_exceeded: '内存超限', runtime_error: '运行时错误',
+          compilation_error: '编译错误', system_error: '系统错误'
+        }
+        createNotification(submission.user_id, 'submission_result', '提交结果',
+          `题目「${problemTitle}」评测结果：${statusMap[judgeResult.status] || judgeResult.status}`,
+          `/submissions/${submissionId}`)
+      }
+
+      await judgeService.updateSkillAndActivity(submission.user_id, submission.problem_id, judgeResult.status)
     } catch (error: any) {
       logger.error('Process submission error', error)
       await query(
@@ -309,6 +329,36 @@ export const judgeService = {
       }
     } catch (error) {
       logger.error('Update user stats error', error)
+    }
+  },
+
+  async updateSkillAndActivity(userId: number, problemId: number, status: string) {
+    try {
+      const problemResult = await query('SELECT category FROM problems WHERE id = $1', [problemId])
+      if (problemResult.rows.length === 0) return
+      const category = problemResult.rows[0].category
+
+      await query(
+        `INSERT INTO user_skills (user_id, category, solved_count, attempt_count)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (user_id, category) DO UPDATE SET
+           attempt_count = user_skills.attempt_count + 1,
+           solved_count = user_skills.solved_count + $3,
+           updated_at = NOW()`,
+        [userId, category, status === 'accepted' ? 1 : 0, 1]
+      )
+
+      const today = new Date().toISOString().split('T')[0]
+      await query(
+        `INSERT INTO user_daily_activity (user_id, activity_date, submission_count, solved_count)
+         VALUES ($1, $2, 1, $3)
+         ON CONFLICT (user_id, activity_date) DO UPDATE SET
+           submission_count = user_daily_activity.submission_count + 1,
+           solved_count = user_daily_activity.solved_count + $3`,
+        [userId, today, status === 'accepted' ? 1 : 0]
+      )
+    } catch (error) {
+      logger.error('Update skill and activity error', error)
     }
   },
 }

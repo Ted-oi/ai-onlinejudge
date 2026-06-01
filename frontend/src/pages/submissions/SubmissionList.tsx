@@ -46,16 +46,21 @@ const SubmissionList = () => {
       width: 80,
     },
     {
-      title: '题目ID',
-      dataIndex: 'problem_id',
-      key: 'problem_id',
-      width: 80,
+      title: '题目',
+      dataIndex: 'problem_title',
+      key: 'problem',
+      width: 160,
+      render: (title: string, record: any) => (
+        <a onClick={() => navigate(`/problems/${record.problem_id}`)}>
+          {title || `P${String(record.problem_id).padStart(4, '0')}`}
+        </a>
+      ),
     },
     {
-      title: '用户ID',
-      dataIndex: 'user_id',
-      key: 'user_id',
-      width: 80,
+      title: '用户',
+      dataIndex: 'username',
+      key: 'username',
+      width: 100,
     },
     {
       title: '编程语言',

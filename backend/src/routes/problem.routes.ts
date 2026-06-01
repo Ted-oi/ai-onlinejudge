@@ -9,5 +9,7 @@ router.get('/:id', authenticate, problemController.getProblemById)
 router.post('/', authenticate, authorize('admin', 'teacher'), problemController.createProblem)
 router.put('/:id', authenticate, authorize('admin', 'teacher'), problemController.updateProblem)
 router.delete('/:id', authenticate, authorize('admin', 'teacher'), problemController.deleteProblem)
+router.post('/:id/favorite', authenticate, problemController.toggleFavorite)
+router.get('/:id/favorite', authenticate, problemController.checkFavorite)
 
 export default router

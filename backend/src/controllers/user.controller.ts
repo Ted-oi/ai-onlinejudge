@@ -119,3 +119,55 @@ export const getUserStats = async (req: Request, res: Response, next: NextFuncti
     next(error)
   }
 }
+
+export const getUserFavorites = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+
+    const result = await query(
+      `SELECT p.*, pf.created_at as favorited_at
+       FROM problem_favorites pf
+       JOIN problems p ON pf.problem_id = p.id
+       WHERE pf.user_id = $1
+       ORDER BY pf.created_at DESC`,
+      [id]
+    )
+
+    res.json({ success: true, data: { favorites: result.rows } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getUserSkillRadar = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+
+    const result = await query(
+      'SELECT category, solved_count, attempt_count FROM user_skills WHERE user_id = $1',
+      [id]
+    )
+
+    res.json({ success: true, data: { skills: result.rows } })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const getUserActivityHeatmap = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+
+    const result = await query(
+      `SELECT activity_date, submission_count, solved_count
+       FROM user_daily_activity
+       WHERE user_id = $1 AND activity_date >= NOW() - INTERVAL '1 year'
+       ORDER BY activity_date ASC`,
+      [id]
+    )
+
+    res.json({ success: true, data: { activities: result.rows } })
+  } catch (error) {
+    next(error)
+  }
+}

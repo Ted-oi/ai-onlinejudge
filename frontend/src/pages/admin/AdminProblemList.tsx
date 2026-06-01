@@ -35,7 +35,7 @@ const AdminProblemList = () => {
         page: pagination.current,
         limit: pagination.pageSize,
       })
-      setProblems(data || [])
+      setProblems(data.problems || [])
     } catch {
       // handled by interceptor
     } finally {

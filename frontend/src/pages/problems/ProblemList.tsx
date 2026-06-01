@@ -12,6 +12,7 @@ const { Option } = Select
 
 const ProblemList = () => {
   const [problems, setProblems] = useState<Problem[]>([])
+  const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(false)
   const [filters, setFilters] = useState({
     difficulty: '',
@@ -22,16 +23,25 @@ const ProblemList = () => {
   const navigate = useNavigate()
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
+  const [allProblems, setAllProblems] = useState<Problem[]>([])
+
   const fetchProblems = async () => {
     try {
       setLoading(true)
-      const data = await problemService.getProblems(filters)
-      // 确保examples字段是有效的数组
+      const { problems: data, total } = await problemService.getProblems({
+        ...filters,
+        limit: 200,
+      })
       const processedData = data.map((problem: Problem) => ({
         ...problem,
         examples: Array.isArray(problem.examples) ? problem.examples : []
       }))
       setProblems(processedData)
+      setTotalCount(total)
+
+      if (!filters.category && !filters.difficulty && !filters.search) {
+        setAllProblems(processedData)
+      }
     } catch (error) {
       console.error('获取题目列表失败:', error)
     } finally {
@@ -58,12 +68,15 @@ const ProblemList = () => {
     setFilters({ ...filters, difficulty: value })
   }
 
+  const formatProblemId = (no: number) => `P${String(no).padStart(4, '0')}`
+
   const columns = [
     {
       title: 'ID',
-      dataIndex: 'id',
+      dataIndex: 'problem_no',
       key: 'id',
       width: 80,
+      render: (no: number) => formatProblemId(no),
     },
     {
       title: '标题',
@@ -84,7 +97,8 @@ const ProblemList = () => {
           medium: 'blue',
           hard: 'red',
         }
-        return <Tag color={colors[difficulty]}>{difficulty}</Tag>
+        const labels: any = { easy: '简单', medium: '中等', hard: '困难' }
+        return <Tag color={colors[difficulty]}>{labels[difficulty] || difficulty}</Tag>
       },
     },
     {
@@ -188,7 +202,7 @@ const ProblemList = () => {
                 setFilters({ ...filters, category: '' })
               }}
             >
-              全部题目 ({problems.length})
+              全部题目 ({totalCount})
             </Button>
           </Space>
         </div>
@@ -202,7 +216,7 @@ const ProblemList = () => {
           </div>
           <Space size="small" wrap>
             {categoriesBySection['syntax']?.map((category) => {
-              const count = problems.filter(p =>
+              const count = allProblems.filter(p =>
                 p.categories?.includes(category.id)
               ).length
               return (
@@ -242,7 +256,7 @@ const ProblemList = () => {
           </div>
           <Space size="small" wrap>
             {categoriesBySection['algorithm']?.map((category) => {
-              const count = problems.filter(p =>
+              const count = allProblems.filter(p =>
                 p.categories?.includes(category.id)
               ).length
               return (
@@ -282,7 +296,7 @@ const ProblemList = () => {
           </div>
           <Space size="small" wrap>
             {categoriesBySection['algorithm_advanced']?.map((category) => {
-              const count = problems.filter(p =>
+              const count = allProblems.filter(p =>
                 p.categories?.includes(category.id)
               ).length
               return (

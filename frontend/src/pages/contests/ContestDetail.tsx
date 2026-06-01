@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, Typography, Tag, Button, Table, Space, Spin, Tabs, Avatar, message } from 'antd'
-import { ArrowLeftOutlined, TrophyOutlined, ClockCircleOutlined, UserOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, TrophyOutlined, ClockCircleOutlined, UserOutlined, CodeOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 import contestService from '../../services/contest.service'
@@ -8,6 +8,7 @@ import type { StandingEntry } from '../../services/contest.service'
 import { problemService } from '../../services/problem.service'
 import type { ContestDetail } from '../../types/contest'
 import type { Problem } from '../../types'
+import ContestRankingLive from '../../components/contests/ContestRankingLive'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -148,6 +149,21 @@ const ContestDetail = () => {
         return <Tag color={colors[difficulty]}>{labels[difficulty] || difficulty}</Tag>
       },
     },
+    ...(status.label === '进行中' || status.label === '即将开始' ? [{
+      title: '操作',
+      key: 'action',
+      width: 100,
+      render: (_: any, record: Problem) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<CodeOutlined />}
+          onClick={() => navigate(`/problems/${record.id}/submit`)}
+        >
+          做题
+        </Button>
+      ),
+    }] : []),
   ]
 
   const standingsColumns = [
@@ -249,14 +265,19 @@ const ContestDetail = () => {
       key: 'standings',
       label: '实时排名',
       children: (
-        <Table
-          columns={standingsColumns}
-          dataSource={standings}
-          rowKey="user_id"
-          loading={standingsLoading}
-          pagination={false}
-          locale={{ emptyText: '暂无排名数据' }}
-        />
+        <div>
+          <Table
+            columns={standingsColumns}
+            dataSource={standings}
+            rowKey="user_id"
+            loading={standingsLoading}
+            pagination={false}
+            locale={{ emptyText: '暂无排名数据' }}
+          />
+          {status.label === '进行中' && (
+            <ContestRankingLive contestId={Number(id)} isOngoing={true} />
+          )}
+        </div>
       ),
     },
   ]

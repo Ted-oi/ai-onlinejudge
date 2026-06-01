@@ -64,9 +64,10 @@ const AdminSubmissionList = () => {
       width: 80,
     },
     {
-      title: '题目ID',
-      dataIndex: 'problem_id',
-      width: 80,
+      title: '题目',
+      dataIndex: 'problem_title',
+      width: 160,
+      render: (title: string, record: any) => title || `P${String(record.problem_id).padStart(4, '0')}`,
     },
     {
       title: '语言',

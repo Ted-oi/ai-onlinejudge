@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import fs from 'fs'
+import path from 'path'
 
 // 课次控制器
 export const getLessonsByCourse = async (req: Request, res: Response, next: NextFunction) => {
@@ -272,14 +274,24 @@ export const deleteMaterial = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params
 
-    const result = await query('DELETE FROM course_materials WHERE id = $1 RETURNING *', [id])
-
-    if (result.rows.length === 0) {
+    const existing = await query('SELECT * FROM course_materials WHERE id = $1', [id])
+    if (existing.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: { message: '资源不存在' }
       })
     }
+
+    const material = existing.rows[0]
+    if (material.file_url) {
+      const fileName = material.file_url.replace('/api/materials/files/', '')
+      const filePath = path.join(process.cwd(), 'uploads', 'courses', fileName)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
+    }
+
+    await query('DELETE FROM course_materials WHERE id = $1', [id])
 
     res.json({
       success: true,
@@ -300,18 +312,38 @@ export const uploadMaterial = async (req: Request, res: Response, next: NextFunc
       })
     }
 
-    // 这里应该实现实际的文件存储逻辑
-    // 简化版本：返回模拟的文件URL
-    const fileUrl = `/uploads/courses/${Date.now()}_${req.file.originalname}`
+    const { course_id, lesson_id, title } = req.body
+    const mime = req.file.mimetype
+
+    let materialType = 'document'
+    if (mime.startsWith('video/')) materialType = 'video'
+    else if (mime.includes('presentation') || mime.includes('powerpoint') || req.file.originalname.match(/\.(ppt|pptx)$/i)) materialType = 'ppt'
+    else if (mime === 'application/pdf') materialType = 'document'
+
+    const ext = path.extname(req.file.originalname) || ''
+    const safeName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}${ext}`
+    const uploadDir = path.join(process.cwd(), 'uploads', 'courses')
+
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true })
+    }
+
+    const finalPath = path.join(uploadDir, safeName)
+    fs.renameSync(req.file.path, finalPath)
+
+    const fileUrl = `/api/materials/files/${safeName}`
+
+    const result = await query(
+      `INSERT INTO course_materials (course_id, lesson_id, title, type, file_url, file_name, file_size, mime_type, order_index)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1)
+       RETURNING *`,
+      [course_id || null, lesson_id || null, title || req.file.originalname, materialType,
+       fileUrl, req.file.originalname, req.file.size, mime]
+    )
 
     res.json({
       success: true,
-      data: {
-        fileUrl,
-        fileName: req.file.originalname,
-        fileSize: req.file.size,
-        mimeType: req.file.mimetype
-      }
+      data: { material: result.rows[0] }
     })
   } catch (error) {
     next(error)

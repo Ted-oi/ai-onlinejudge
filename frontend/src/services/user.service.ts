@@ -32,6 +32,21 @@ const userService = {
     const response = await api.put(`/users/${id}`, data)
     return response.data.data.user
   },
+
+  getFavorites: async (id: number) => {
+    const response = await api.get(`/users/${id}/favorites`)
+    return response.data.data.favorites
+  },
+
+  getSkillRadar: async (id: number) => {
+    const response = await api.get(`/users/${id}/skill-radar`)
+    return response.data.data.skills
+  },
+
+  getActivityHeatmap: async (id: number) => {
+    const response = await api.get(`/users/${id}/activity-heatmap`)
+    return response.data.data.activities
+  },
 }
 
 export default userService
