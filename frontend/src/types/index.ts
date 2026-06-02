@@ -8,8 +8,41 @@ export interface User {
   rating: number
   solved_count: number
   submit_count: number
+  school?: string
+  organization?: string
+  github_url?: string
   created_at: string
   updated_at: string
+}
+
+export interface UserAchievement {
+  id: number
+  badge_type: string
+  badge_name: string
+  description: string
+  icon: string
+  earned_at: string
+}
+
+export interface RatingHistoryEntry {
+  rating: number
+  reason: string
+  contest_id?: number
+  created_at: string
+}
+
+export interface SolvedProblem {
+  problem_id: number
+  title: string
+  difficulty: string
+  category: string
+  solved_at: string
+}
+
+export interface ObjectiveData {
+  type: 'choice' | 'judge'
+  options?: string[]
+  answer?: number | boolean
 }
 
 export interface Problem {
@@ -18,10 +51,12 @@ export interface Problem {
   description: string
   difficulty: 'easy' | 'medium' | 'hard'
   category: string
-  categories?: string[]  // 支持多个分类
+  categories?: string[]
   time_limit: number
   memory_limit: number
   examples: any[]
+  problem_type?: 'coding' | 'objective'
+  objective_data?: ObjectiveData | null
   created_at: string
   updated_at: string
 }

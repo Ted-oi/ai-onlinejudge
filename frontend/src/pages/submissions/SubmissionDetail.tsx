@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Button, Tag, Typography, Space, message, Spin } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, ShareAltOutlined } from '@ant-design/icons'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
@@ -82,6 +82,7 @@ const SubmissionDetail = () => {
       'java': 'Java',
       'python': 'Python',
       'c': 'C',
+      'answer': '客观题',
     }
     return languages[lang] || lang
   }
@@ -109,7 +110,7 @@ const SubmissionDetail = () => {
           <Descriptions.Item label="提交ID">{submission.id}</Descriptions.Item>
           <Descriptions.Item label="题目">{submission.problem_title || `P${String(submission.problem_id).padStart(4, '0')}`}</Descriptions.Item>
           <Descriptions.Item label="用户ID">{submission.user_id}</Descriptions.Item>
-          <Descriptions.Item label="编程语言">
+          <Descriptions.Item label={submission.language === 'answer' ? '提交类型' : '编程语言'}>
             {getLanguageName(submission.language)}
           </Descriptions.Item>
           {submission.runtime != null && (
@@ -137,7 +138,7 @@ const SubmissionDetail = () => {
         )}
 
         <div style={{ marginTop: 24 }}>
-          <Title level={4}>提交代码</Title>
+          <Title level={4}>{submission.language === 'answer' ? '提交答案' : '提交代码'}</Title>
           <ReactSyntaxHighlighter
             language={submission.language}
             style={docco}
@@ -155,6 +156,12 @@ const SubmissionDetail = () => {
             <Button onClick={() => navigate(`/problems/${submission.problem_id}/submit`)}>
               重新提交
             </Button>
+            {submission.status === 'accepted' && (
+              <Button type="primary" icon={<ShareAltOutlined />}
+                onClick={() => navigate(`/code-shares/create?submission_id=${submission.id}&problem_id=${submission.problem_id}`)}>
+                分享代码
+              </Button>
+            )}
           </Space>
         </div>
 
