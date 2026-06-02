@@ -49,3 +49,4 @@ export interface Course {
 }
 
 export { type Contest, type ContestDetail, type ContestQuery } from './contest'
+export { type ProblemSet, type ProblemSetDetail, type ProblemSetProblem } from './problemSet'

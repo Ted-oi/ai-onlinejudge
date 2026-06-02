@@ -11,6 +11,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   ArrowLeftOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher from '../common/ThemeSwitcher'
@@ -48,6 +49,11 @@ const AdminLayout = () => {
       key: '/admin/courses',
       icon: <BookOutlined />,
       label: '课程管理',
+    },
+    {
+      key: '/admin/problem-sets',
+      icon: <UnorderedListOutlined />,
+      label: '题单管理',
     },
     {
       key: '/admin/submissions',

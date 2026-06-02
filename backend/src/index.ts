@@ -22,6 +22,7 @@ import adminRoutes from './routes/admin.routes'
 import notificationRoutes from './routes/notification.routes'
 import discussionRoutes from './routes/discussion.routes'
 import assignmentRoutes from './routes/assignment.routes'
+import problemSetRoutes from './routes/problemSet.routes'
 import * as adminController from './controllers/admin.controller'
 import * as plagiarismController from './controllers/plagiarism.controller'
 import * as importExportController from './controllers/problemImportExport.controller'
@@ -95,6 +96,7 @@ app.use('/api/problems/:id/test-cases', testcaseRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/discussions', discussionRoutes)
 app.use('/api/assignments', assignmentRoutes)
+app.use('/api/problem-sets', problemSetRoutes)
 
 // Plagiarism detection
 app.post('/api/plagiarism/:problemId', authenticate, authorize('admin', 'teacher'), plagiarismController.checkPlagiarism)

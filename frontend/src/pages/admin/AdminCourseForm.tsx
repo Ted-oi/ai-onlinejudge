@@ -17,9 +17,11 @@ const AdminCourseForm = () => {
   const [saving, setSaving] = useState(false)
   const [lessons, setLessons] = useState<any[]>([])
   const [teachers, setTeachers] = useState<any[]>([])
+  const [problemSets, setProblemSets] = useState<any[]>([])
 
   useEffect(() => {
     loadTeachers()
+    loadProblemSets()
     if (isEdit) loadCourse()
   }, [id])
 
@@ -27,6 +29,13 @@ const AdminCourseForm = () => {
     try {
       const res = await api.get('/users', { params: { role: 'teacher', limit: 100 } })
       setTeachers(res.data.data.users || [])
+    } catch {}
+  }
+
+  const loadProblemSets = async () => {
+    try {
+      const res = await api.get('/problem-sets', { params: { limit: 200 } })
+      setProblemSets(res.data.data.problemSets || [])
     } catch {}
   }
 
@@ -43,6 +52,7 @@ const AdminCourseForm = () => {
         description: course.description,
         category: course.category,
         instructor_id: course.instructor_id,
+        problem_set_id: course.problem_set_id || undefined,
       })
 
       const lessonsData = lessonsRes.data.data.lessons || []
@@ -69,6 +79,9 @@ const AdminCourseForm = () => {
 
       if (isEdit) {
         await api.put(`/courses/${id}`, values)
+        // Update problem set association
+        const psId = values.problem_set_id || null
+        await api.put(`/courses/${id}/problem-set`, { problem_set_id: psId }).catch(() => {})
         for (const lesson of lessons.filter(l => !l.id)) {
           await api.post('/lessons', { ...lesson, course_id: Number(id) })
         }
@@ -218,6 +231,11 @@ const AdminCourseForm = () => {
           <Form.Item name="instructor_id" label="授课教师">
             <Select style={{ width: 200 }} placeholder="选择教师" allowClear
               options={teachers.map((t: any) => ({ label: t.username, value: t.id }))} />
+          </Form.Item>
+
+          <Form.Item name="problem_set_id" label="关联题单">
+            <Select style={{ width: 200 }} placeholder="选择题单" allowClear
+              options={problemSets.map((ps: any) => ({ label: ps.title, value: ps.id }))} />
           </Form.Item>
         </Space>
       </Form>

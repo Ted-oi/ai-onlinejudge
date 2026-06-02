@@ -8,6 +8,7 @@ router.get('/', authenticate, courseController.getCourses)
 router.get('/:id', authenticate, courseController.getCourseById)
 router.post('/', authenticate, authorize('admin', 'teacher'), courseController.createCourse)
 router.put('/:id', authenticate, authorize('admin', 'teacher'), courseController.updateCourse)
+router.put('/:id/problem-set', authenticate, authorize('admin', 'teacher'), courseController.updateCourseProblemSet)
 router.delete('/:id', authenticate, authorize('admin', 'teacher'), courseController.deleteCourse)
 
 export default router

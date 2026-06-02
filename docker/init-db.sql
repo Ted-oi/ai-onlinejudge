@@ -291,3 +291,30 @@ CREATE INDEX IF NOT EXISTS idx_assignments_course_id ON assignments(course_id);
 CREATE INDEX IF NOT EXISTS idx_contest_submissions_contest_user ON contest_submissions(contest_id, user_id);
 CREATE INDEX IF NOT EXISTS idx_user_skills_user_id ON user_skills(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_daily_activity_user_date ON user_daily_activity(user_id, activity_date);
+
+-- 题单表
+CREATE TABLE IF NOT EXISTS problem_sets (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  category VARCHAR(50) NOT NULL,
+  difficulty VARCHAR(20) DEFAULT 'mixed',
+  cover_color VARCHAR(20) DEFAULT '#1890ff',
+  problem_ids JSONB DEFAULT '[]',
+  creator_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  is_published BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'courses' AND column_name = 'problem_set_id'
+  ) THEN
+    ALTER TABLE courses ADD COLUMN problem_set_id INTEGER REFERENCES problem_sets(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_problem_sets_category ON problem_sets(category);
+CREATE INDEX IF NOT EXISTS idx_problem_sets_creator_id ON problem_sets(creator_id);

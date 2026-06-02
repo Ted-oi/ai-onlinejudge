@@ -33,6 +33,10 @@ import AdminSubmissionList from './pages/admin/AdminSubmissionList'
 import DiscussionList from './pages/discussions/DiscussionList'
 import DiscussionDetail from './pages/discussions/DiscussionDetail'
 import AssignmentDetail from './pages/assignments/AssignmentDetail'
+import ProblemSetList from './pages/problemSets/ProblemSetList'
+import ProblemSetDetail from './pages/problemSets/ProblemSetDetail'
+import AdminProblemSetList from './pages/admin/AdminProblemSetList'
+import AdminProblemSetForm from './pages/admin/AdminProblemSetForm'
 import NotFoundPage from './components/common/NotFoundPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -70,6 +74,8 @@ function ThemedApp() {
             <Route path="courses" element={<CourseList />} />
             <Route path="courses/:id" element={<CourseDetail />} />
             <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="problem-sets" element={<ProblemSetList />} />
+            <Route path="problem-sets/:id" element={<ProblemSetDetail />} />
             <Route path="contests" element={<ContestList />} />
             <Route path="contests/:id" element={<ContestDetail />} />
             <Route path="ai" element={<AiChat />} />
@@ -95,6 +101,9 @@ function ThemedApp() {
             <Route path="courses" element={<AdminCourseList />} />
             <Route path="courses/create" element={<AdminCourseForm />} />
             <Route path="courses/:id/edit" element={<AdminCourseForm />} />
+            <Route path="problem-sets" element={<AdminProblemSetList />} />
+            <Route path="problem-sets/create" element={<AdminProblemSetForm />} />
+            <Route path="problem-sets/:id/edit" element={<AdminProblemSetForm />} />
             <Route path="submissions" element={<AdminSubmissionList />} />
           </Route>
         </Routes>

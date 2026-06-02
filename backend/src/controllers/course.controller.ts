@@ -38,6 +38,7 @@ export const getCourses = async (req: Request, res: Response, next: NextFunction
 export const getCourseById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
+    const userId = (req as any).userId
 
     const result = await query('SELECT * FROM courses WHERE id = $1', [id])
 
@@ -48,16 +49,47 @@ export const getCourseById = async (req: Request, res: Response, next: NextFunct
       })
     }
 
+    const course = result.rows[0]
+
     const materialsResult = await query(
       'SELECT * FROM course_materials WHERE course_id = $1 ORDER BY order_index',
       [id]
     )
 
+    // Fetch associated problem set with progress
+    let problemSet: any = null
+    if (course.problem_set_id) {
+      const psResult = await query(
+        'SELECT id, title, description, category, difficulty, cover_color, problem_ids FROM problem_sets WHERE id = $1',
+        [course.problem_set_id]
+      )
+      if (psResult.rows.length > 0) {
+        const ps = psResult.rows[0]
+        const pids: number[] = ps.problem_ids || []
+        let solvedCount = 0
+        if (userId && pids.length > 0) {
+          const solvedResult = await query(
+            `SELECT COUNT(DISTINCT problem_id) as cnt FROM submissions
+             WHERE user_id = $1 AND status = 'accepted' AND problem_id = ANY($2::int[])`,
+            [userId, pids]
+          )
+          solvedCount = parseInt(solvedResult.rows[0].cnt)
+        }
+        problemSet = {
+          ...ps,
+          total_count: pids.length,
+          solved_count: solvedCount,
+          percentage: pids.length > 0 ? Math.round((solvedCount / pids.length) * 100) : 0,
+        }
+      }
+    }
+
     res.json({
       success: true,
       data: {
-        course: result.rows[0],
-        materials: materialsResult.rows
+        course,
+        materials: materialsResult.rows,
+        problemSet,
       }
     })
   } catch (error) {
@@ -131,6 +163,26 @@ export const deleteCourse = async (req: Request, res: Response, next: NextFuncti
       success: true,
       message: '删除成功'
     })
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const updateCourseProblemSet = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params
+    const { problem_set_id } = req.body
+
+    const result = await query(
+      `UPDATE courses SET problem_set_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+      [problem_set_id || null, id]
+    )
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '课程不存在' } })
+    }
+
+    res.json({ success: true, data: { course: result.rows[0] } })
   } catch (error) {
     next(error)
   }

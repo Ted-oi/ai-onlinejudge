@@ -10,8 +10,10 @@ import {
   ClockCircleOutlined,
   DownloadOutlined,
   FilePdfOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
 import { courseService } from '../../services/course.service'
+import api from '../../services/api'
 import type { Course, CourseMaterial } from '../../types/course'
 
 const { Title, Text, Paragraph } = Typography
@@ -28,18 +30,22 @@ const CourseDetail = () => {
   const [selectedMaterial, setSelectedMaterial] = useState<CourseMaterial | null>(null)
   const [videoModalVisible, setVideoModalVisible] = useState(false)
   const [pptModalVisible, setPptModalVisible] = useState(false)
+  const [problemSet, setProblemSet] = useState<any>(null)
 
   const fetchCourseData = async () => {
     if (!id) return
     try {
       setLoading(true)
-      const [courseData, lessonsData, progressData] = await Promise.all([
-        courseService.getCourseWithLessons(Number(id)),
+      const [courseRes, lessonsData, progressData] = await Promise.all([
+        api.get(`/courses/${id}`),
         courseService.getLessonsByCourse(Number(id)),
         courseService.getCourseProgress(Number(id)),
       ])
+      const courseData = courseRes.data.data.course
+      const psData = courseRes.data.data.problemSet
       setCourse(courseData)
       setProgress(progressData)
+      setProblemSet(psData || null)
 
       const lessonsWithMaterials = await Promise.all(
         (lessonsData || []).map(async (lesson: any) => {
@@ -129,6 +135,39 @@ const CourseDetail = () => {
             )}
           </Space>
         </div>
+
+        {problemSet && (
+          <Card size="small" style={{ marginBottom: 16, background: '#f6ffed', borderColor: '#b7eb8f' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <Space direction="vertical" size={4}>
+                <Space>
+                  <UnorderedListOutlined />
+                  <Text strong>配套题单：{problemSet.title}</Text>
+                </Space>
+                <Text type="secondary">
+                  已完成 {problemSet.solved_count}/{problemSet.total_count} 题
+                </Text>
+              </Space>
+              <Space>
+                <div style={{ width: 120 }}>
+                  <Progress
+                    percent={problemSet.percentage}
+                    size="small"
+                    strokeColor={problemSet.percentage >= 100 ? '#52c41a' : '#1890ff'}
+                  />
+                </div>
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<UnorderedListOutlined />}
+                  onClick={() => navigate(`/problem-sets/${problemSet.id}`)}
+                >
+                  进入题单
+                </Button>
+              </Space>
+            </div>
+          </Card>
+        )}
 
         <Divider />
 

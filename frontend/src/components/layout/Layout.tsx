@@ -12,6 +12,7 @@ import {
   CrownOutlined,
   SettingOutlined,
   MenuOutlined,
+  UnorderedListOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher from '../common/ThemeSwitcher'
@@ -33,6 +34,7 @@ const Layout = () => {
     { key: '/contests', icon: <TrophyOutlined />, label: '比赛' },
     { key: '/leaderboard', icon: <CrownOutlined />, label: '排行榜' },
     { key: '/courses', icon: <BookOutlined />, label: '课程' },
+    { key: '/problem-sets', icon: <UnorderedListOutlined />, label: '题单' },
     { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
     ...(user.role === 'admin' || user.role === 'teacher'
       ? [{ key: '/admin', icon: <SettingOutlined />, label: '管理后台' }]
