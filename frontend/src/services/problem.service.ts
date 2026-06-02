@@ -8,6 +8,7 @@ export interface ProblemQuery {
   search?: string
   page?: number
   limit?: number
+  problem_type?: 'coding' | 'objective'
 }
 
 export const problemService = {

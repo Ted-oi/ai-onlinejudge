@@ -9,11 +9,28 @@ export const createSubmission = async (req: Request, res: Response, next: NextFu
     const userId = (req as any).userId
     const { problem_id, language, code, contest_id, assignment_id } = req.body
 
+    // Check problem type for objective questions
+    const problemResult = await query('SELECT problem_type, objective_data, title FROM problems WHERE id = $1', [problem_id])
+    if (problemResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: { message: '题目不存在' } })
+    }
+    const problem = problemResult.rows[0]
+
+    let status = 'pending'
+    if (problem.problem_type === 'objective' && problem.objective_data) {
+      const od = problem.objective_data
+      if (od.type === 'choice') {
+        status = (parseInt(code) === od.answer) ? 'accepted' : 'wrong_answer'
+      } else if (od.type === 'judge') {
+        status = (code === String(od.answer)) ? 'accepted' : 'wrong_answer'
+      }
+    }
+
     const result = await query(
       `INSERT INTO submissions (problem_id, user_id, language, code, status, contest_id)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [problem_id, userId, language, code, 'pending', contest_id || null]
+      [problem_id, userId, language, code, status, contest_id || null]
     )
 
     const submission = result.rows[0]
@@ -34,15 +51,27 @@ export const createSubmission = async (req: Request, res: Response, next: NextFu
       )
     }
 
-    judgeService.processSubmission(submission.id).catch(async (err) => {
-      logger.error('Background judging failed', { submissionId: submission.id, error: err })
-      try {
-        await query(
-          'UPDATE submissions SET status = $1, error_message = $2 WHERE id = $3',
-          ['system_error', `评测失败: ${err.message || '未知错误'}`, submission.id]
-        )
-      } catch (_) { /* ignore */ }
-    })
+    // Objective: update stats immediately; Coding: send to judge
+    if (problem.problem_type === 'objective') {
+      await judgeService.updateUserStats(userId, status)
+      await judgeService.updateSkillAndActivity(userId, problem_id, status)
+      createNotification(
+        userId, 'submission_result',
+        status === 'accepted' ? '回答正确' : '回答错误',
+        `题目「${problem.title}」${status === 'accepted' ? '回答正确！' : '回答错误'}`,
+        `/submissions/${submission.id}`
+      )
+    } else {
+      judgeService.processSubmission(submission.id).catch(async (err) => {
+        logger.error('Background judging failed', { submissionId: submission.id, error: err })
+        try {
+          await query(
+            'UPDATE submissions SET status = $1, error_message = $2 WHERE id = $3',
+            ['system_error', `评测失败: ${err.message || '未知错误'}`, submission.id]
+          )
+        } catch (_) { /* ignore */ }
+      })
+    }
 
     res.status(201).json({
       success: true,

@@ -6,6 +6,7 @@ export interface CreateSubmissionData {
   language: string
   code: string
   contest_id?: number
+  assignment_id?: number
 }
 
 export const submissionService = {

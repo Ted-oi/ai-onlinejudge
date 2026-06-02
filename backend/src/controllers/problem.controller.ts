@@ -4,11 +4,16 @@ import { logger } from '../utils/logger'
 
 export const getProblems = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { difficulty, category, tags, search, page = 1, limit = 20 } = req.query
+    const { difficulty, category, tags, search, page = 1, limit = 20, problem_type } = req.query
 
     let queryText = 'SELECT * FROM problems WHERE 1=1'
     const params: any[] = []
     let paramCount = 1
+
+    if (problem_type) {
+      queryText += ` AND problem_type = $${paramCount++}`
+      params.push(problem_type)
+    }
 
     if (difficulty) {
       queryText += ` AND difficulty = $${paramCount++}`
@@ -30,8 +35,15 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     }
 
     if (search) {
-      queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
-      params.push(`%${search}%`, `%${search}%`)
+      const searchNum = Number(search)
+      if (!isNaN(searchNum) && search !== '') {
+        queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount} OR problem_no = $${paramCount + 1} OR id = $${paramCount + 1})`
+        params.push(`%${search}%`, searchNum)
+        paramCount += 2
+      } else {
+        queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
+        params.push(`%${search}%`, `%${search}%`)
+      }
     }
 
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
@@ -43,6 +55,10 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
     let countText = 'SELECT COUNT(*) as total FROM problems WHERE 1=1'
     const countParams: any[] = []
     let countParam = 1
+    if (problem_type) {
+      countText += ` AND problem_type = $${countParam++}`
+      countParams.push(problem_type)
+    }
     if (difficulty) {
       countText += ` AND difficulty = $${countParam++}`
       countParams.push(difficulty)
@@ -59,8 +75,15 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
       }
     }
     if (search) {
-      countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
-      countParams.push(`%${search}%`, `%${search}%`)
+      const searchNum = Number(search)
+      if (!isNaN(searchNum) && search !== '') {
+        countText += ` AND (title ILIKE $${countParam} OR description ILIKE $${countParam} OR problem_no = $${countParam + 1} OR id = $${countParam + 1})`
+        countParams.push(`%${search}%`, searchNum)
+        countParam += 2
+      } else {
+        countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
+        countParams.push(`%${search}%`, `%${search}%`)
+      }
     }
     const countResult = await query(countText, countParams)
 
@@ -111,6 +134,13 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
       problem.examples = []
     }
 
+    // Hide correct answer from students
+    const userRole = (req as any).userRole
+    if (problem.objective_data && userRole === 'student') {
+      const { answer, ...rest } = problem.objective_data
+      problem.objective_data = rest
+    }
+
     res.json({
       success: true,
       data: { problem }
@@ -122,13 +152,16 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
 
 export const createProblem = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, description, difficulty, category, time_limit, memory_limit, examples } = req.body
+    const { title, description, difficulty, category, time_limit, memory_limit, examples,
+            problem_type, objective_data, categories } = req.body
 
     const result = await query(
-      `INSERT INTO problems (title, description, difficulty, category, time_limit, memory_limit, examples)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO problems (title, description, difficulty, category, categories, time_limit, memory_limit, examples, problem_type, objective_data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [title, description, difficulty, category, time_limit, memory_limit, JSON.stringify(examples)]
+      [title, description, difficulty, category, JSON.stringify(categories || []),
+       time_limit || 0, memory_limit || 0, JSON.stringify(examples || []),
+       problem_type || 'coding', objective_data ? JSON.stringify(objective_data) : null]
     )
 
     res.status(201).json({
@@ -143,15 +176,19 @@ export const createProblem = async (req: Request, res: Response, next: NextFunct
 export const updateProblem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const { title, description, difficulty, category, time_limit, memory_limit, examples } = req.body
+    const { title, description, difficulty, category, time_limit, memory_limit, examples,
+            problem_type, objective_data, categories } = req.body
 
     const result = await query(
       `UPDATE problems
-       SET title = $1, description = $2, difficulty = $3, category = $4,
-           time_limit = $5, memory_limit = $6, examples = $7, updated_at = NOW()
-       WHERE id = $8
+       SET title = $1, description = $2, difficulty = $3, category = $4, categories = $5,
+           time_limit = $6, memory_limit = $7, examples = $8,
+           problem_type = $9, objective_data = $10, updated_at = NOW()
+       WHERE id = $11
        RETURNING *`,
-      [title, description, difficulty, category, time_limit, memory_limit, JSON.stringify(examples), id]
+      [title, description, difficulty, category, JSON.stringify(categories || []),
+       time_limit || 0, memory_limit || 0, JSON.stringify(examples || []),
+       problem_type || 'coding', objective_data ? JSON.stringify(objective_data) : null, id]
     )
 
     if (result.rows.length === 0) {

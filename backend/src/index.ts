@@ -23,6 +23,10 @@ import notificationRoutes from './routes/notification.routes'
 import discussionRoutes from './routes/discussion.routes'
 import assignmentRoutes from './routes/assignment.routes'
 import problemSetRoutes from './routes/problemSet.routes'
+import articleRoutes from './routes/article.routes'
+import codeShareRoutes from './routes/codeShare.routes'
+import learningPathRoutes from './routes/learningPath.routes'
+import teamRoutes from './routes/team.routes'
 import * as adminController from './controllers/admin.controller'
 import * as plagiarismController from './controllers/plagiarism.controller'
 import * as importExportController from './controllers/problemImportExport.controller'
@@ -75,6 +79,29 @@ app.use(compression())
 // 静态文件服务：课程素材文件
 app.use('/api/materials/files', express.static(path.join(process.cwd(), 'uploads', 'courses')))
 
+// 静态文件服务：头像
+app.use('/api/avatars', express.static(path.join(process.cwd(), 'uploads', 'avatars')))
+
+// 头像上传配置
+const avatarUpload = multer({
+  dest: 'uploads/avatars',
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('仅支持 JPG/PNG/GIF/WebP'))
+  },
+})
+
+// 创建头像目录
+const avatarDir = path.join(process.cwd(), 'uploads', 'avatars')
+if (!fs.existsSync(avatarDir)) {
+  fs.mkdirSync(avatarDir, { recursive: true })
+}
+
+app.post('/api/users/:id/avatar', authenticate, avatarUpload.single('avatar'),
+  (req, res, next) => import('./controllers/user.controller').then(uc => uc.uploadAvatar(req, res, next))
+)
+
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`)
   next()
@@ -97,6 +124,10 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/discussions', discussionRoutes)
 app.use('/api/assignments', assignmentRoutes)
 app.use('/api/problem-sets', problemSetRoutes)
+app.use('/api/articles', articleRoutes)
+app.use('/api/code-shares', codeShareRoutes)
+app.use('/api/learning-paths', learningPathRoutes)
+app.use('/api/teams', teamRoutes)
 
 // Plagiarism detection
 app.post('/api/plagiarism/:problemId', authenticate, authorize('admin', 'teacher'), plagiarismController.checkPlagiarism)

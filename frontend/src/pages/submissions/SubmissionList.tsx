@@ -73,6 +73,7 @@ const SubmissionList = () => {
           'java': 'Java',
           'python': 'Python',
           'c': 'C',
+          'answer': '客观题',
         }
         return languages[language] || language
       },

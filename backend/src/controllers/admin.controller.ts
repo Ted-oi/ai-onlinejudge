@@ -4,7 +4,7 @@ import { logger } from '../utils/logger'
 
 export const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [users, problems, submissions, courses, contests, statusBreakdown, recentSubmissions] = await Promise.all([
+    const [users, problems, submissions, courses, contests, statusBreakdown, recentSubmissions, pendingArticles] = await Promise.all([
       query('SELECT COUNT(*) as count FROM users'),
       query('SELECT COUNT(*) as count FROM problems'),
       query('SELECT COUNT(*) as count FROM submissions'),
@@ -19,6 +19,7 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
         LEFT JOIN users u ON s.user_id = u.id
         ORDER BY s.created_at DESC LIMIT 10
       `),
+      query("SELECT COUNT(*) as count FROM articles WHERE status = 'pending'"),
     ])
 
     res.json({
@@ -29,6 +30,7 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
         totalSubmissions: parseInt(submissions.rows[0].count),
         totalCourses: parseInt(courses.rows[0].count),
         totalContests: parseInt(contests.rows[0].count),
+        pendingArticles: parseInt(pendingArticles.rows[0].count),
         statusBreakdown: statusBreakdown.rows.map((r: any) => ({
           status: r.status,
           count: parseInt(r.count),

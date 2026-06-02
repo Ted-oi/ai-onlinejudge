@@ -132,6 +132,12 @@ const AdminProblemList = () => {
       },
     },
     {
+      title: '类型',
+      dataIndex: 'problem_type',
+      width: 80,
+      render: (t: string) => t === 'objective' ? <Tag color="purple">客观题</Tag> : <Tag color="blue">编程题</Tag>,
+    },
+    {
       title: '分类',
       dataIndex: 'categories',
       width: 200,

@@ -11,6 +11,7 @@ import Home from './pages/home/Home'
 import ProblemList from './pages/problems/ProblemList'
 import ProblemDetail from './pages/problems/ProblemDetail'
 import ProblemSubmit from './pages/problems/ProblemSubmit'
+import ObjectiveSubmit from './pages/problems/ObjectiveSubmit'
 import SubmissionList from './pages/submissions/SubmissionList'
 import SubmissionDetail from './pages/submissions/SubmissionDetail'
 import CourseList from './pages/courses/CourseList'
@@ -37,6 +38,21 @@ import ProblemSetList from './pages/problemSets/ProblemSetList'
 import ProblemSetDetail from './pages/problemSets/ProblemSetDetail'
 import AdminProblemSetList from './pages/admin/AdminProblemSetList'
 import AdminProblemSetForm from './pages/admin/AdminProblemSetForm'
+import ArticleList from './pages/articles/ArticleList'
+import ArticleDetail from './pages/articles/ArticleDetail'
+import ArticleEditor from './pages/articles/ArticleEditor'
+import MyArticles from './pages/articles/MyArticles'
+import ArticleFavorites from './pages/articles/ArticleFavorites'
+import AdminArticleReview from './pages/admin/AdminArticleReview'
+import CodeShareList from './pages/codeShare/CodeShareList'
+import CodeShareDetail from './pages/codeShare/CodeShareDetail'
+import CodeShareEditor from './pages/codeShare/CodeShareEditor'
+import LearningPathList from './pages/learningPaths/LearningPathList'
+import LearningPathDetail from './pages/learningPaths/LearningPathDetail'
+import AdminLearningPathForm from './pages/admin/AdminLearningPathForm'
+import TeamList from './pages/teams/TeamList'
+import TeamDetail from './pages/teams/TeamDetail'
+import CreateTeam from './pages/teams/CreateTeam'
 import NotFoundPage from './components/common/NotFoundPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -54,8 +70,21 @@ function ThemedApp() {
       theme={{
         algorithm: theme === 'dark' ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
         token: {
-          colorPrimary: '#1890ff',
-          borderRadius: 6,
+          colorPrimary: '#4f46e5',
+          borderRadius: 8,
+        },
+        components: {
+          Menu: {
+            itemBorderRadius: 8,
+            itemMarginInline: 8,
+            itemHeight: 44,
+          },
+          Card: {
+            borderRadius: 12,
+          },
+          Button: {
+            borderRadius: 8,
+          },
         },
       }}
     >
@@ -69,6 +98,7 @@ function ThemedApp() {
             <Route path="problems" element={<ProblemList />} />
             <Route path="problems/:id" element={<ProblemDetail />} />
             <Route path="problems/:id/submit" element={<ProblemSubmit />} />
+            <Route path="problems/:id/answer" element={<ObjectiveSubmit />} />
             <Route path="submissions" element={<SubmissionList />} />
             <Route path="submissions/:id" element={<SubmissionDetail />} />
             <Route path="courses" element={<CourseList />} />
@@ -84,6 +114,20 @@ function ThemedApp() {
             <Route path="discussions/problem/:problemId" element={<DiscussionList />} />
             <Route path="discussions/thread/:id" element={<DiscussionDetail />} />
             <Route path="assignments/:id" element={<AssignmentDetail />} />
+            <Route path="articles" element={<ArticleList />} />
+            <Route path="articles/create/:type" element={<ArticleEditor />} />
+            <Route path="articles/:id" element={<ArticleDetail />} />
+            <Route path="articles/:id/edit" element={<ArticleEditor />} />
+            <Route path="my-articles" element={<MyArticles />} />
+            <Route path="favorites/articles" element={<ArticleFavorites />} />
+            <Route path="code-shares" element={<CodeShareList />} />
+            <Route path="code-shares/create" element={<CodeShareEditor />} />
+            <Route path="code-shares/:id" element={<CodeShareDetail />} />
+            <Route path="learning-paths" element={<LearningPathList />} />
+            <Route path="learning-paths/:id" element={<LearningPathDetail />} />
+            <Route path="teams" element={<TeamList />} />
+            <Route path="teams/create" element={<CreateTeam />} />
+            <Route path="teams/:id" element={<TeamDetail />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
@@ -105,6 +149,8 @@ function ThemedApp() {
             <Route path="problem-sets/create" element={<AdminProblemSetForm />} />
             <Route path="problem-sets/:id/edit" element={<AdminProblemSetForm />} />
             <Route path="submissions" element={<AdminSubmissionList />} />
+            <Route path="article-review" element={<AdminArticleReview />} />
+            <Route path="learning-paths" element={<AdminLearningPathForm />} />
           </Route>
         </Routes>
       </BrowserRouter>
