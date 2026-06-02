@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Card, Typography, Tag, Button, Table, Space, Spin, Tabs, Avatar, message } from 'antd'
+import { Card, Typography, Tag, Button, Table, Space, Tabs, Avatar, message } from 'antd'
 import { ArrowLeftOutlined, TrophyOutlined, ClockCircleOutlined, UserOutlined, CodeOutlined } from '@ant-design/icons'
 import { useParams, useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
@@ -9,6 +9,7 @@ import { problemService } from '../../services/problem.service'
 import type { ContestDetail } from '../../types/contest'
 import type { Problem } from '../../types'
 import ContestRankingLive from '../../components/contests/ContestRankingLive'
+import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 
 const { Title, Text, Paragraph } = Typography
 
@@ -231,11 +232,7 @@ const ContestDetail = () => {
   ]
 
   if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: '100px 0' }}>
-        <Spin size="large" />
-      </div>
-    )
+    return <Card style={{ margin: 24 }}><LoadingSkeleton type="detail" /></Card>
   }
 
   if (!contest) {

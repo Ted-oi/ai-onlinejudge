@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { ConfigProvider, theme as antTheme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
@@ -5,61 +6,73 @@ import Layout from './components/layout/Layout'
 import AdminLayout from './components/layout/AdminLayout'
 import AdminRoute from './components/common/AdminRoute'
 import { ThemeProvider, useTheme } from './components/common/ThemeSwitcher'
+import PageErrorBoundary from './components/common/PageErrorBoundary'
+import LoadingSkeleton from './components/common/LoadingSkeleton'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Home from './pages/home/Home'
-import ProblemList from './pages/problems/ProblemList'
-import ProblemDetail from './pages/problems/ProblemDetail'
-import ProblemSubmit from './pages/problems/ProblemSubmit'
-import ObjectiveSubmit from './pages/problems/ObjectiveSubmit'
-import SubmissionList from './pages/submissions/SubmissionList'
-import SubmissionDetail from './pages/submissions/SubmissionDetail'
-import CourseList from './pages/courses/CourseList'
-import CourseDetail from './pages/courses/CourseDetail'
-import ContestList from './pages/contests/ContestList'
-import ContestDetail from './pages/contests/ContestDetail'
-import Leaderboard from './pages/leaderboard/Leaderboard'
-import AiChat from './pages/ai/AiChat'
-import UserProfile from './pages/user/UserProfile'
-import UserSettings from './pages/user/UserSettings'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import AdminProblemList from './pages/admin/AdminProblemList'
-import AdminProblemForm from './pages/admin/AdminProblemForm'
-import AdminUserList from './pages/admin/AdminUserList'
-import AdminContestList from './pages/admin/AdminContestList'
-import AdminContestForm from './pages/admin/AdminContestForm'
-import AdminCourseList from './pages/admin/AdminCourseList'
-import AdminCourseForm from './pages/admin/AdminCourseForm'
-import AdminSubmissionList from './pages/admin/AdminSubmissionList'
-import DiscussionList from './pages/discussions/DiscussionList'
-import DiscussionDetail from './pages/discussions/DiscussionDetail'
-import AssignmentDetail from './pages/assignments/AssignmentDetail'
-import ProblemSetList from './pages/problemSets/ProblemSetList'
-import ProblemSetDetail from './pages/problemSets/ProblemSetDetail'
-import AdminProblemSetList from './pages/admin/AdminProblemSetList'
-import AdminProblemSetForm from './pages/admin/AdminProblemSetForm'
-import ArticleList from './pages/articles/ArticleList'
-import ArticleDetail from './pages/articles/ArticleDetail'
-import ArticleEditor from './pages/articles/ArticleEditor'
-import MyArticles from './pages/articles/MyArticles'
-import ArticleFavorites from './pages/articles/ArticleFavorites'
-import AdminArticleReview from './pages/admin/AdminArticleReview'
-import CodeShareList from './pages/codeShare/CodeShareList'
-import CodeShareDetail from './pages/codeShare/CodeShareDetail'
-import CodeShareEditor from './pages/codeShare/CodeShareEditor'
-import LearningPathList from './pages/learningPaths/LearningPathList'
-import LearningPathDetail from './pages/learningPaths/LearningPathDetail'
-import AdminLearningPathForm from './pages/admin/AdminLearningPathForm'
-import TeamList from './pages/teams/TeamList'
-import TeamDetail from './pages/teams/TeamDetail'
-import CreateTeam from './pages/teams/CreateTeam'
-import NotFoundPage from './components/common/NotFoundPage'
+
+const ProblemList = React.lazy(() => import('./pages/problems/ProblemList'))
+const ProblemDetail = React.lazy(() => import('./pages/problems/ProblemDetail'))
+const ProblemSubmit = React.lazy(() => import('./pages/problems/ProblemSubmit'))
+const ObjectiveSubmit = React.lazy(() => import('./pages/problems/ObjectiveSubmit'))
+const SubmissionList = React.lazy(() => import('./pages/submissions/SubmissionList'))
+const SubmissionDetail = React.lazy(() => import('./pages/submissions/SubmissionDetail'))
+const CourseList = React.lazy(() => import('./pages/courses/CourseList'))
+const CourseDetail = React.lazy(() => import('./pages/courses/CourseDetail'))
+const ContestList = React.lazy(() => import('./pages/contests/ContestList'))
+const ContestDetail = React.lazy(() => import('./pages/contests/ContestDetail'))
+const Leaderboard = React.lazy(() => import('./pages/leaderboard/Leaderboard'))
+const AiChat = React.lazy(() => import('./pages/ai/AiChat'))
+const UserProfile = React.lazy(() => import('./pages/user/UserProfile'))
+const UserSettings = React.lazy(() => import('./pages/user/UserSettings'))
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'))
+const AdminProblemList = React.lazy(() => import('./pages/admin/AdminProblemList'))
+const AdminProblemForm = React.lazy(() => import('./pages/admin/AdminProblemForm'))
+const AdminUserList = React.lazy(() => import('./pages/admin/AdminUserList'))
+const AdminContestList = React.lazy(() => import('./pages/admin/AdminContestList'))
+const AdminContestForm = React.lazy(() => import('./pages/admin/AdminContestForm'))
+const AdminCourseList = React.lazy(() => import('./pages/admin/AdminCourseList'))
+const AdminCourseForm = React.lazy(() => import('./pages/admin/AdminCourseForm'))
+const AdminSubmissionList = React.lazy(() => import('./pages/admin/AdminSubmissionList'))
+const DiscussionList = React.lazy(() => import('./pages/discussions/DiscussionList'))
+const DiscussionDetail = React.lazy(() => import('./pages/discussions/DiscussionDetail'))
+const AssignmentDetail = React.lazy(() => import('./pages/assignments/AssignmentDetail'))
+const ProblemSetList = React.lazy(() => import('./pages/problemSets/ProblemSetList'))
+const ProblemSetDetail = React.lazy(() => import('./pages/problemSets/ProblemSetDetail'))
+const AdminProblemSetList = React.lazy(() => import('./pages/admin/AdminProblemSetList'))
+const AdminProblemSetForm = React.lazy(() => import('./pages/admin/AdminProblemSetForm'))
+const AdminTeamList = React.lazy(() => import('./pages/admin/AdminTeamList'))
+const ArticleList = React.lazy(() => import('./pages/articles/ArticleList'))
+const ArticleDetail = React.lazy(() => import('./pages/articles/ArticleDetail'))
+const ArticleEditor = React.lazy(() => import('./pages/articles/ArticleEditor'))
+const MyArticles = React.lazy(() => import('./pages/articles/MyArticles'))
+const ArticleFavorites = React.lazy(() => import('./pages/articles/ArticleFavorites'))
+const AdminArticleReview = React.lazy(() => import('./pages/admin/AdminArticleReview'))
+const CodeShareList = React.lazy(() => import('./pages/codeShare/CodeShareList'))
+const CodeShareDetail = React.lazy(() => import('./pages/codeShare/CodeShareDetail'))
+const CodeShareEditor = React.lazy(() => import('./pages/codeShare/CodeShareEditor'))
+const LearningPathList = React.lazy(() => import('./pages/learningPaths/LearningPathList'))
+const LearningPathDetail = React.lazy(() => import('./pages/learningPaths/LearningPathDetail'))
+const AdminLearningPathForm = React.lazy(() => import('./pages/admin/AdminLearningPathForm'))
+const TeamList = React.lazy(() => import('./pages/teams/TeamList'))
+const TeamDetail = React.lazy(() => import('./pages/teams/TeamDetail'))
+const CreateTeam = React.lazy(() => import('./pages/teams/CreateTeam'))
+const NotFoundPage = React.lazy(() => import('./components/common/NotFoundPage'))
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token')
   if (!token) return <Navigate to="/login" replace />
   return <>{children}</>
 }
+
+const LazyPage = ({ children }: { children: React.ReactNode }) => (
+  <PageErrorBoundary>
+    <Suspense fallback={<LoadingSkeleton type="detail" />}>
+      {children}
+    </Suspense>
+  </PageErrorBoundary>
+)
 
 function ThemedApp() {
   const { theme } = useTheme()
@@ -95,62 +108,63 @@ function ThemedApp() {
 
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Home />} />
-            <Route path="problems" element={<ProblemList />} />
-            <Route path="problems/:id" element={<ProblemDetail />} />
-            <Route path="problems/:id/submit" element={<ProblemSubmit />} />
-            <Route path="problems/:id/answer" element={<ObjectiveSubmit />} />
-            <Route path="submissions" element={<SubmissionList />} />
-            <Route path="submissions/:id" element={<SubmissionDetail />} />
-            <Route path="courses" element={<CourseList />} />
-            <Route path="courses/:id" element={<CourseDetail />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="problem-sets" element={<ProblemSetList />} />
-            <Route path="problem-sets/:id" element={<ProblemSetDetail />} />
-            <Route path="contests" element={<ContestList />} />
-            <Route path="contests/:id" element={<ContestDetail />} />
-            <Route path="ai" element={<AiChat />} />
-            <Route path="users/:id" element={<UserProfile />} />
-            <Route path="users/:id/settings" element={<UserSettings />} />
-            <Route path="discussions/problem/:problemId" element={<DiscussionList />} />
-            <Route path="discussions/thread/:id" element={<DiscussionDetail />} />
-            <Route path="assignments/:id" element={<AssignmentDetail />} />
-            <Route path="articles" element={<ArticleList />} />
-            <Route path="articles/create/:type" element={<ArticleEditor />} />
-            <Route path="articles/:id" element={<ArticleDetail />} />
-            <Route path="articles/:id/edit" element={<ArticleEditor />} />
-            <Route path="my-articles" element={<MyArticles />} />
-            <Route path="favorites/articles" element={<ArticleFavorites />} />
-            <Route path="code-shares" element={<CodeShareList />} />
-            <Route path="code-shares/create" element={<CodeShareEditor />} />
-            <Route path="code-shares/:id" element={<CodeShareDetail />} />
-            <Route path="learning-paths" element={<LearningPathList />} />
-            <Route path="learning-paths/:id" element={<LearningPathDetail />} />
-            <Route path="teams" element={<TeamList />} />
-            <Route path="teams/create" element={<CreateTeam />} />
-            <Route path="teams/:id" element={<TeamDetail />} />
-            <Route path="*" element={<NotFoundPage />} />
+            <Route path="problems" element={<LazyPage><ProblemList /></LazyPage>} />
+            <Route path="problems/:id" element={<LazyPage><ProblemDetail /></LazyPage>} />
+            <Route path="problems/:id/submit" element={<LazyPage><ProblemSubmit /></LazyPage>} />
+            <Route path="problems/:id/answer" element={<LazyPage><ObjectiveSubmit /></LazyPage>} />
+            <Route path="submissions" element={<LazyPage><SubmissionList /></LazyPage>} />
+            <Route path="submissions/:id" element={<LazyPage><SubmissionDetail /></LazyPage>} />
+            <Route path="courses" element={<LazyPage><CourseList /></LazyPage>} />
+            <Route path="courses/:id" element={<LazyPage><CourseDetail /></LazyPage>} />
+            <Route path="leaderboard" element={<LazyPage><Leaderboard /></LazyPage>} />
+            <Route path="problem-sets" element={<LazyPage><ProblemSetList /></LazyPage>} />
+            <Route path="problem-sets/:id" element={<LazyPage><ProblemSetDetail /></LazyPage>} />
+            <Route path="contests" element={<LazyPage><ContestList /></LazyPage>} />
+            <Route path="contests/:id" element={<LazyPage><ContestDetail /></LazyPage>} />
+            <Route path="ai" element={<LazyPage><AiChat /></LazyPage>} />
+            <Route path="users/:id" element={<LazyPage><UserProfile /></LazyPage>} />
+            <Route path="users/:id/settings" element={<LazyPage><UserSettings /></LazyPage>} />
+            <Route path="discussions/problem/:problemId" element={<LazyPage><DiscussionList /></LazyPage>} />
+            <Route path="discussions/thread/:id" element={<LazyPage><DiscussionDetail /></LazyPage>} />
+            <Route path="assignments/:id" element={<LazyPage><AssignmentDetail /></LazyPage>} />
+            <Route path="articles" element={<LazyPage><ArticleList /></LazyPage>} />
+            <Route path="articles/create/:type" element={<LazyPage><ArticleEditor /></LazyPage>} />
+            <Route path="articles/:id" element={<LazyPage><ArticleDetail /></LazyPage>} />
+            <Route path="articles/:id/edit" element={<LazyPage><ArticleEditor /></LazyPage>} />
+            <Route path="my-articles" element={<LazyPage><MyArticles /></LazyPage>} />
+            <Route path="favorites/articles" element={<LazyPage><ArticleFavorites /></LazyPage>} />
+            <Route path="code-shares" element={<LazyPage><CodeShareList /></LazyPage>} />
+            <Route path="code-shares/create" element={<LazyPage><CodeShareEditor /></LazyPage>} />
+            <Route path="code-shares/:id" element={<LazyPage><CodeShareDetail /></LazyPage>} />
+            <Route path="learning-paths" element={<LazyPage><LearningPathList /></LazyPage>} />
+            <Route path="learning-paths/:id" element={<LazyPage><LearningPathDetail /></LazyPage>} />
+            <Route path="teams" element={<LazyPage><TeamList /></LazyPage>} />
+            <Route path="teams/create" element={<LazyPage><CreateTeam /></LazyPage>} />
+            <Route path="teams/:id" element={<LazyPage><TeamDetail /></LazyPage>} />
+            <Route path="*" element={<LazyPage><NotFoundPage /></LazyPage>} />
           </Route>
 
           <Route path="/admin" element={
             <ProtectedRoute><AdminRoute><AdminLayout /></AdminRoute></ProtectedRoute>
           }>
-            <Route index element={<AdminDashboard />} />
-            <Route path="problems" element={<AdminProblemList />} />
-            <Route path="problems/create" element={<AdminProblemForm />} />
-            <Route path="problems/:id/edit" element={<AdminProblemForm />} />
-            <Route path="users" element={<AdminUserList />} />
-            <Route path="contests" element={<AdminContestList />} />
-            <Route path="contests/create" element={<AdminContestForm />} />
-            <Route path="contests/:id/edit" element={<AdminContestForm />} />
-            <Route path="courses" element={<AdminCourseList />} />
-            <Route path="courses/create" element={<AdminCourseForm />} />
-            <Route path="courses/:id/edit" element={<AdminCourseForm />} />
-            <Route path="problem-sets" element={<AdminProblemSetList />} />
-            <Route path="problem-sets/create" element={<AdminProblemSetForm />} />
-            <Route path="problem-sets/:id/edit" element={<AdminProblemSetForm />} />
-            <Route path="submissions" element={<AdminSubmissionList />} />
-            <Route path="article-review" element={<AdminArticleReview />} />
-            <Route path="learning-paths" element={<AdminLearningPathForm />} />
+            <Route index element={<LazyPage><AdminDashboard /></LazyPage>} />
+            <Route path="problems" element={<LazyPage><AdminProblemList /></LazyPage>} />
+            <Route path="problems/create" element={<LazyPage><AdminProblemForm /></LazyPage>} />
+            <Route path="problems/:id/edit" element={<LazyPage><AdminProblemForm /></LazyPage>} />
+            <Route path="users" element={<LazyPage><AdminUserList /></LazyPage>} />
+            <Route path="contests" element={<LazyPage><AdminContestList /></LazyPage>} />
+            <Route path="contests/create" element={<LazyPage><AdminContestForm /></LazyPage>} />
+            <Route path="contests/:id/edit" element={<LazyPage><AdminContestForm /></LazyPage>} />
+            <Route path="courses" element={<LazyPage><AdminCourseList /></LazyPage>} />
+            <Route path="courses/create" element={<LazyPage><AdminCourseForm /></LazyPage>} />
+            <Route path="courses/:id/edit" element={<LazyPage><AdminCourseForm /></LazyPage>} />
+            <Route path="problem-sets" element={<LazyPage><AdminProblemSetList /></LazyPage>} />
+            <Route path="problem-sets/create" element={<LazyPage><AdminProblemSetForm /></LazyPage>} />
+            <Route path="problem-sets/:id/edit" element={<LazyPage><AdminProblemSetForm /></LazyPage>} />
+            <Route path="submissions" element={<LazyPage><AdminSubmissionList /></LazyPage>} />
+            <Route path="article-review" element={<LazyPage><AdminArticleReview /></LazyPage>} />
+            <Route path="teams" element={<LazyPage><AdminTeamList /></LazyPage>} />
+            <Route path="learning-paths" element={<LazyPage><AdminLearningPathForm /></LazyPage>} />
           </Route>
         </Routes>
       </BrowserRouter>

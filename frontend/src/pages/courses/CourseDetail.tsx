@@ -13,6 +13,7 @@ import {
   UnorderedListOutlined,
 } from '@ant-design/icons'
 import { courseService } from '../../services/course.service'
+import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 import api from '../../services/api'
 import type { Course, CourseMaterial } from '../../types/course'
 
@@ -101,7 +102,7 @@ const CourseDetail = () => {
     return '#faad14'
   }
 
-  if (!course) return <div>加载中...</div>
+  if (!course) return <Card style={{ margin: 24 }}><LoadingSkeleton type="detail" /></Card>
 
   return (
     <div>

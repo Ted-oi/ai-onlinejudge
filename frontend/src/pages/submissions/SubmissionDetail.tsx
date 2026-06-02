@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Card, Descriptions, Button, Tag, Typography, Space, message, Spin } from 'antd'
+import { Card, Descriptions, Button, Tag, Typography, Space, message } from 'antd'
 import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, ShareAltOutlined } from '@ant-design/icons'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
 import ErrorExplanation from '../../components/problems/ErrorExplanation'
+import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 
 const { Title, Text } = Typography
 
@@ -58,7 +59,7 @@ const SubmissionDetail = () => {
   }, [submission?.status])
 
   if (!submission) {
-    return <div style={{ textAlign: 'center', padding: 40 }}><Spin tip="加载中..." /></div>
+    return <Card style={{ margin: 24 }}><LoadingSkeleton type="detail" /></Card>
   }
 
   const statusConfig: any = {

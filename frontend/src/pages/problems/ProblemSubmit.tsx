@@ -1,29 +1,37 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Card, Button, Typography, Select, message } from 'antd'
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import { Card, Button, Typography, Select, message, Space } from 'antd'
+import { ArrowLeftOutlined, FontSizeOutlined } from '@ant-design/icons'
 import { problemService } from '../../services/problem.service'
 import { submissionService } from '../../services/submission.service'
 import type { Problem } from '../../types'
 import MonacoEditor from '@monaco-editor/react'
+import { useTheme } from '../../components/common/ThemeSwitcher'
 
 const { Title } = Typography
+
+const defaultCppCode = `#include <iostream>
+using namespace std;
+
+int main() {
+    // 在这里编写你的代码
+    return 0;
+}`
 
 const ProblemSubmit = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const contestId = searchParams.get('contest_id')
+  const { theme } = useTheme()
   const [problem, setProblem] = useState<Problem | null>(null)
-  const [code, setCode] = useState('')
-  const [language, setLanguage] = useState('cpp')
+  const [code, setCode] = useState(defaultCppCode)
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [fontSize, setFontSize] = useState(14)
 
   useEffect(() => {
-    if (id) {
-      fetchProblem()
-    }
+    if (id) fetchProblem()
   }, [id])
 
   const fetchProblem = async () => {
@@ -31,41 +39,11 @@ const ProblemSubmit = () => {
       setLoading(true)
       const data = await problemService.getProblemById(Number(id))
       setProblem(data)
-      setCode(getDefaultCode(language))
-    } catch (error) {
+    } catch {
       message.error('获取题目详情失败')
     } finally {
       setLoading(false)
     }
-  }
-
-  const getDefaultCode = (lang: string) => {
-    const templates: any = {
-      cpp: `#include <iostream>
-using namespace std;
-
-int main() {
-    // 在这里编写你的代码
-    return 0;
-}`,
-      java: `import java.util.Scanner;
-
-public class Main {
-    public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        // 在这里编写你的代码
-    }
-}`,
-      python: `# 在这里编写你的代码
-if __name__ == "__main__":
-    pass`,
-    }
-    return templates[lang] || ''
-  }
-
-  const handleLanguageChange = (newLanguage: string) => {
-    setLanguage(newLanguage)
-    setCode(getDefaultCode(newLanguage))
   }
 
   const handleSubmit = async () => {
@@ -78,24 +56,20 @@ if __name__ == "__main__":
       setSubmitting(true)
       const submission = await submissionService.createSubmission({
         problem_id: Number(id),
-        language,
+        language: 'cpp',
         code,
         ...(contestId ? { contest_id: Number(contestId) } : {}),
       })
       message.success('提交成功')
       navigate(`/submissions/${submission.id}`)
-    } catch (error) {
+    } catch {
       message.error('提交失败')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const languages = [
-    { value: 'cpp', label: 'C++' },
-    { value: 'java', label: 'Java' },
-    { value: 'python', label: 'Python' },
-  ]
+  const editorTheme = theme === 'dark' ? 'vs-dark' : 'light'
 
   return (
     <div>
@@ -113,26 +87,40 @@ if __name__ == "__main__":
           <Title level={3}>{problem?.title}</Title>
         </div>
 
-        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Typography.Text strong>选择编程语言：</Typography.Text>
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <FontSizeOutlined />
+          <Typography.Text>字号</Typography.Text>
           <Select
-            value={language}
-            onChange={handleLanguageChange}
-            style={{ width: 140 }}
-            options={languages}
+            value={fontSize}
+            onChange={setFontSize}
+            style={{ width: 80 }}
+            options={[
+              { value: 12, label: '12px' },
+              { value: 14, label: '14px' },
+              { value: 16, label: '16px' },
+              { value: 18, label: '18px' },
+              { value: 20, label: '20px' },
+            ]}
           />
         </div>
 
-        <div style={{ height: '500px', marginBottom: 16 }}>
+        <div style={{
+          height: '500px',
+          marginBottom: 16,
+          border: `1px solid ${theme === 'dark' ? '#303030' : '#d9d9d9'}`,
+          borderRadius: 8,
+          overflow: 'hidden',
+        }}>
           <MonacoEditor
             height="100%"
-            language={language === 'cpp' ? 'cpp' : language}
-            theme="vs-dark"
+            language="cpp"
+            theme={editorTheme}
             value={code}
             onChange={(value) => setCode(value || '')}
             options={{
               minimap: { enabled: false },
-              fontSize: 14,
+              fontSize,
+              fontFamily: 'Consolas, "Courier New", monospace',
               lineNumbers: 'on',
               scrollBeyondLastLine: false,
               automaticLayout: true,

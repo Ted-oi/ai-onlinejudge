@@ -21,6 +21,7 @@ import {
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher, { useTheme } from '../common/ThemeSwitcher'
+import PageBreadcrumb from '../common/PageBreadcrumb'
 
 const { Header, Content, Sider } = AntLayout
 
@@ -65,6 +66,11 @@ const Layout = () => {
     navigate('/login')
   }
 
+  const handleMenuClick = (key: string) => {
+    navigate(key)
+    if (window.innerWidth < 768) setCollapsed(true)
+  }
+
   const bg = isDark ? '#141414' : '#fff'
   const bgColor = isDark ? '#1f1f1f' : '#fff'
   const borderColor = isDark ? '#303030' : '#f0f0f0'
@@ -81,6 +87,8 @@ const Layout = () => {
         width={220}
         breakpoint="lg"
         collapsedWidth={0}
+        onBreakpoint={(broken) => { if (broken) setCollapsed(true) }}
+        trigger={null}
         className="app-sider"
         style={{
           background: bgColor,
@@ -118,7 +126,7 @@ const Layout = () => {
           mode="inline"
           selectedKeys={['/' + location.pathname.split('/')[1]]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => handleMenuClick(key)}
           style={{
             border: 'none',
             padding: '8px 0',
@@ -126,6 +134,7 @@ const Layout = () => {
           }}
         />
       </Sider>
+      {!collapsed && <div className="mobile-backdrop" onClick={() => setCollapsed(true)} />}
       <AntLayout style={{ background: bg }}>
         <Header style={{
           padding: '0 24px',
@@ -138,7 +147,6 @@ const Layout = () => {
             type="text"
             icon={<MenuOutlined />}
             onClick={() => setCollapsed(!collapsed)}
-            style={{ display: 'none' }}
             className="mobile-menu-btn"
           />
           <Space size={16}>
@@ -158,7 +166,10 @@ const Layout = () => {
           </Space>
         </Header>
         <Content style={{ margin: 0, padding: '24px', background: contentBg, minHeight: 'calc(100vh - 64px)' }}>
-          <Outlet />
+          <PageBreadcrumb />
+          <div key={location.pathname} className="page-transition">
+            <Outlet />
+          </div>
         </Content>
       </AntLayout>
     </AntLayout>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layout as AntLayout, Menu, Avatar, Dropdown, Space } from 'antd'
+import { Layout as AntLayout, Menu, Avatar, Dropdown, Space, Button } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
   DashboardOutlined,
@@ -13,9 +13,11 @@ import {
   ArrowLeftOutlined,
   UnorderedListOutlined,
   AuditOutlined,
+  MenuOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher, { useTheme } from '../common/ThemeSwitcher'
+import PageBreadcrumb from '../common/PageBreadcrumb'
 
 const { Header, Content, Sider } = AntLayout
 
@@ -36,12 +38,13 @@ const AdminLayout = () => {
   const menuItems = [
     { key: '/admin', icon: <DashboardOutlined />, label: '仪表盘' },
     { key: '/admin/problems', icon: <CodeOutlined />, label: '题目管理' },
-    { key: '/admin/users', icon: <TeamOutlined />, label: '用户管理' },
+    { key: '/admin/users', icon: <UserOutlined />, label: '用户管理' },
     { key: '/admin/contests', icon: <TrophyOutlined />, label: '竞赛管理' },
     { key: '/admin/courses', icon: <BookOutlined />, label: '课程管理' },
     { key: '/admin/problem-sets', icon: <UnorderedListOutlined />, label: '题单管理' },
     { key: '/admin/submissions', icon: <FileSearchOutlined />, label: '提交审查' },
     { key: '/admin/article-review', icon: <AuditOutlined />, label: '文章审核' },
+    { key: '/admin/teams', icon: <TeamOutlined />, label: '团队管理' },
     { key: '/', icon: <ArrowLeftOutlined />, label: '返回前台' },
   ]
 
@@ -53,6 +56,11 @@ const AdminLayout = () => {
       onClick: () => { localStorage.removeItem('token'); localStorage.removeItem('user'); navigate('/login') },
     },
   ]
+
+  const handleMenuClick = (key: string) => {
+    navigate(key)
+    if (window.innerWidth < 768) setCollapsed(true)
+  }
 
   const getSelectedKey = () => {
     const path = location.pathname
@@ -69,6 +77,10 @@ const AdminLayout = () => {
         onCollapse={setCollapsed}
         className="app-sider"
         width={220}
+        breakpoint="lg"
+        collapsedWidth={0}
+        onBreakpoint={(broken) => { if (broken) setCollapsed(true) }}
+        trigger={null}
         style={{
           background: bgColor,
           borderRight: `1px solid ${borderColor}`,
@@ -104,7 +116,7 @@ const AdminLayout = () => {
           mode="inline"
           selectedKeys={[getSelectedKey()]}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => handleMenuClick(key)}
           style={{
             border: 'none',
             padding: '8px 0',
@@ -112,16 +124,26 @@ const AdminLayout = () => {
           }}
         />
       </Sider>
+      {!collapsed && <div className="mobile-backdrop" onClick={() => setCollapsed(true)} />}
       <AntLayout style={{ background: bg }}>
         <Header style={{
           padding: '0 24px',
           background: bg,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           borderBottom: `1px solid ${borderColor}`,
-        }}>
-          <span style={{ fontSize: 16, fontWeight: 500, color: textColor }}>
-            管理后台
-          </span>
+          position: 'sticky', top: 0, zIndex: 10,
+        }} className="site-layout-header">
+          <Space size={12} align="center">
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+              className="mobile-menu-btn"
+            />
+            <span style={{ fontSize: 16, fontWeight: 500, color: textColor }}>
+              管理后台
+            </span>
+          </Space>
           <Space size={16}>
             <NotificationCenter />
             <ThemeSwitcher />
@@ -135,8 +157,9 @@ const AdminLayout = () => {
             </Dropdown>
           </Space>
         </Header>
-        <Content style={{ margin: '24px 16px 0', background: bg }}>
-          <div style={{ padding: 24, minHeight: 360, borderRadius: 8 }}>
+        <Content style={{ margin: '0', padding: '24px', background: bg, minHeight: 'calc(100vh - 64px)' }}>
+          <PageBreadcrumb />
+          <div key={location.pathname} className="page-transition">
             <Outlet />
           </div>
         </Content>

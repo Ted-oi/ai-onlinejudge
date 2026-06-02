@@ -8,8 +8,7 @@ import dayjs from 'dayjs'
 const { Title, Text } = Typography
 const { TextArea } = Input
 
-const DiscussionList = () => {
-  const { problemId } = useParams<{ problemId: string }>()
+const DiscussionList = ({ problemId }: { problemId?: number }) => {
   const navigate = useNavigate()
   const [discussions, setDiscussions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -17,8 +16,9 @@ const DiscussionList = () => {
   const [form] = Form.useForm()
 
   const fetchDiscussions = async () => {
+    if (!problemId) return
     try {
-      const data = await discussionService.getDiscussions(Number(problemId))
+      const data = await discussionService.getDiscussions(problemId)
       setDiscussions(data.discussions || [])
     } catch {} finally {
       setLoading(false)
@@ -28,7 +28,7 @@ const DiscussionList = () => {
   useEffect(() => { fetchDiscussions() }, [problemId])
 
   const handleCreate = async (values: any) => {
-    await discussionService.createDiscussion(Number(problemId), values)
+    await discussionService.createDiscussion(problemId!, values)
     form.resetFields()
     setModalOpen(false)
     fetchDiscussions()

@@ -1,262 +1,154 @@
 # AI OnlineJudge 部署指南
 
+## 一键启动（开发环境）
+
+```bash
+# 克隆项目
+git clone https://github.com/Ted-oi/ai-onlinejudge.git
+cd ai-onlinejudge
+
+# 安装依赖
+cd frontend && npm install && cd ../backend && npm install
+
+# 一键启动 PostgreSQL + 后端 + 前端
+bash start.sh
+
+# 一键停止
+bash stop.sh
+```
+
+- 前端: http://localhost:3000
+- 后端: http://localhost:5000
+
 ## 环境要求
 
 - Node.js 18+
-- PostgreSQL 14+
-- Redis 6+
-- Docker & Docker Compose
-- Claude API Key
+- PostgreSQL 14+（免安装版即可，数据目录默认 `C:\Users\15522\pgsql\data`）
+- 智谱 API Key（AI 功能可选，不配置则 AI 功能不可用）
 
-## 开发环境搭建
+## 环境配置
 
-### 1. 克隆项目
-
-```bash
-git clone <repository-url>
-cd ai-onlinejudge
-```
-
-### 2. 安装依赖
-
-```bash
-# 安装后端依赖
-cd backend
-npm install
-
-# 安装前端依赖
-cd ../frontend
-npm install
-```
-
-### 3. 配置环境变量
-
-复制环境变量模板文件：
-
-```bash
-# 后端环境变量
-cp backend/.env.example backend/.env
-
-# 前端环境变量
-cp frontend/.env.example frontend/.env
-
-# Docker环境变量
-cp docker/.env.example docker/.env
-```
-
-编辑 `backend/.env` 文件，配置必要的环境变量：
+编辑 `backend/.env`：
 
 ```env
 # Database
+DB_TYPE=postgres
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=onlinejudge
 DB_USER=postgres
 DB_PASSWORD=postgres
 
-# Redis
-REDIS_URL=redis://localhost:6379
-
 # JWT
-JWT_SECRET=your-secret-key-change-in-production
+JWT_SECRET=dev-secret-key-change-in-production
 
-# AI
-ANTHROPIC_API_KEY=your-anthropic-api-key
+# AI（可选）
+GLM_API_KEY=your-glm-api-key
+GLM_API_URL=https://open.bigmodel.cn/api/paas/v4/chat/completions
+GLM_MODEL=glm-4-flash
 
 # Server
 PORT=5000
 NODE_ENV=development
+
+# Frontend
+FRONTEND_URL=http://localhost:3000
 ```
 
-### 4. 启动数据库
+## 前端配置
+
+前端通过 Vite 代理将 `/api` 请求转发到后端，配置在 `frontend/vite.config.ts`：
+
+```typescript
+server: {
+  port: 3000,
+  proxy: {
+    '/api': {
+      target: 'http://localhost:5000',
+      changeOrigin: true,
+    },
+  },
+}
+```
+
+## 测试账号
+
+| 账号 | 密码 | 角色 |
+|------|------|------|
+| admin | admin123 | 管理员 |
+| teacher1 | admin123 | 教师 |
+| student1 | admin123 | 学生 |
+
+## Docker 生产部署
 
 ```bash
-# 使用Docker启动数据库
 cd docker
-docker-compose up -d postgres redis
-
-# 等待数据库启动
-sleep 10
-
-# 初始化数据库
-docker exec -i onlinejudge-postgres psql -U postgres -d onlinejudge < init-db.sql
+docker compose up -d
 ```
 
-### 5. 启动后端服务
+Docker 配置包含：
+- 后端多阶段构建（Node.js）
+- 前端多阶段构建（Nginx 托管静态文件）
+- Nginx 反向代理（前端 + API）
 
-```bash
-cd backend
-npm run dev
-```
-
-后端服务将在 `http://localhost:5000` 启动。
-
-### 6. 启动前端服务
-
-```bash
-# 新开一个终端
-cd frontend
-npm run dev
-```
-
-前端服务将在 `http://localhost:3000` 启动。
-
-### 7. 启动评测服务（可选）
-
-```bash
-# 新开一个终端
-cd judge
-docker-compose up -d
-```
-
-评测服务将在 `http://localhost:8000` 启动。
-
-## 生产环境部署
-
-### 1. 使用Docker Compose部署
-
-```bash
-# 配置环境变量
-cp docker/.env.example docker/.env
-# 编辑 .env 文件，设置生产环境配置
-
-# 构建并启动所有服务
-docker-compose -f docker/docker-compose.yml up -d
-
-# 查看日志
-docker-compose -f docker/docker-compose.yml logs -f
-
-# 停止服务
-docker-compose -f docker/docker-compose.yml down
-```
-
-### 2. 单独部署后端
-
-```bash
-cd backend
-
-# 构建项目
-npm run build
-
-# 使用PM2启动
-npm install -g pm2
-pm2 start dist/index.js --name onlinejudge-backend
-
-# 或者直接启动
-npm start
-```
-
-### 3. 单独部署前端
-
-```bash
-cd frontend
-
-# 构建项目
-npm run build
-
-# 使用nginx部署
-# 将 dist 目录配置到nginx
-```
-
-### 4. nginx配置示例
+### Nginx 配置
 
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
 
     # 前端静态文件
     location / {
-        root /path/to/frontend/dist;
-        index index.html;
+        root /usr/share/nginx/html;
         try_files $uri $uri/ /index.html;
     }
 
-    # 后端API代理
+    # API 代理到后端
     location /api {
-        proxy_pass http://localhost:5000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
+        proxy_pass http://backend:5000;
         proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # 前端资源
-    location /assets {
-        root /path/to/frontend/dist;
-        expires 1y;
-        add_header Cache-Control "public, immutable";
+        proxy_set_header X-Real-IP $remote_addr;
     }
 }
 ```
 
 ## 数据库管理
 
-### 备份数据库
+### 备份
 
 ```bash
-docker exec onlinejudge-postgres pg_dump -U postgres onlinejudge > backup.sql
+pg_dump -U postgres onlinejudge > backup.sql
 ```
 
-### 恢复数据库
+### 恢复
 
 ```bash
-docker exec -i onlinejudge-postgres psql -U postgres onlinejudge < backup.sql
-```
-
-### 查看数据库状态
-
-```bash
-docker exec -it onlinejudge-postgres psql -U postgres -d onlinejudge
+psql -U postgres onlinejudge < backup.sql
 ```
 
 ## 常见问题
 
-### 1. 数据库连接失败
+### 1. 登录提示"请求失败"
 
-检查数据库是否启动：
+检查 PostgreSQL 是否运行：
 ```bash
-docker ps | grep postgres
+# Linux/Mac
+pg_isready
+
+# Windows
+netstat -an | grep 5432
 ```
 
-检查环境变量配置是否正确。
+如果未运行，执行 `bash start.sh` 会自动启动。
 
-### 2. Redis连接失败
+### 2. Rate Limit 429 错误
 
-检查Redis是否启动：
-```bash
-docker ps | grep redis
-```
+默认限制为每分钟 500 次请求。如需调整，修改 `backend/src/index.ts` 中的 `rateLimit` 配置。
 
-### 3. 前端无法访问后端API
+### 3. AI 功能不可用
 
-检查CORS配置是否正确，确保 `FRONTEND_URL` 环境变量设置正确。
+确认 `backend/.env` 中 `GLM_API_KEY` 已配置有效的智谱 API Key。可在 https://open.bigmodel.cn 申请。
 
-### 4. 评测服务不可用
+### 4. 前端无法访问后端
 
-检查评测服务是否启动，确保 `JUDGE_SERVER_URL` 和 `JUDGE_SERVER_TOKEN` 配置正确。
-
-## 安全建议
-
-1. 修改所有默认密码和密钥
-2. 使用HTTPS协议
-3. 配置防火墙规则
-4. 定期备份数据库
-5. 监控服务器资源使用情况
-6. 及时更新依赖包版本
-
-## 性能优化
-
-1. 配置Redis缓存热点数据
-2. 使用CDN加速静态资源
-3. 数据库查询优化
-4. 启用gzip压缩
-5. 配置负载均衡
-
-## 监控和日志
-
-1. 配置日志收集系统（如ELK）
-2. 设置性能监控（如Prometheus）
-3. 配置告警系统
-4. 定期检查服务器资源使用情况
+确认 `frontend/vite.config.ts` 中 proxy target 指向后端实际端口。

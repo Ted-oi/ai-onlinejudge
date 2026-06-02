@@ -51,17 +51,18 @@ export async function checkAndAwardBadges(userId: number): Promise<string[]> {
   const streak_days = parseInt(streakRes.rows[0]?.cnt || '0')
 
   const contestWinRes = await query(
-    `SELECT COUNT(*) as wins FROM contest_participants cp
-     JOIN contests c ON cp.contest_id = c.id
-     WHERE cp.user_id = $1 AND cp.rank = 1`,
+    `SELECT COUNT(DISTINCT cs.contest_id) as wins
+     FROM contest_submissions cs
+     JOIN submissions s ON cs.submission_id = s.id
+     WHERE cs.user_id = $1 AND s.status = 'accepted'`,
     [userId]
   )
   const contest_wins = parseInt(contestWinRes.rows[0]?.wins || '0')
 
   const contestTop3Res = await query(
-    `SELECT COUNT(*) as tops FROM contest_participants cp
-     JOIN contests c ON cp.contest_id = c.id
-     WHERE cp.user_id = $1 AND cp.rank <= 3`,
+    `SELECT COUNT(DISTINCT cr.contest_id) as tops
+     FROM contest_registrations cr
+     WHERE cr.user_id = $1`,
     [userId]
   )
   const contest_top3 = parseInt(contestTop3Res.rows[0]?.tops || '0')

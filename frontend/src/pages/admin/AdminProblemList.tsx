@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, Button, Input, Select, Tag, Popconfirm, Space, message, Upload, Modal } from 'antd'
 import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, DownloadOutlined, UploadOutlined, SafetyOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
@@ -27,10 +27,6 @@ const AdminProblemList = () => {
   const [selectedProblem, setSelectedProblem] = useState<{ id: number; title: string } | null>(null)
   const navigate = useNavigate()
 
-  useState(() => {
-    loadProblems()
-  })
-
   const loadProblems = async () => {
     setLoading(true)
     try {
@@ -48,6 +44,10 @@ const AdminProblemList = () => {
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    loadProblems()
+  }, [pagination.current, pagination.pageSize])
 
   const handleDelete = async (id: number) => {
     try {

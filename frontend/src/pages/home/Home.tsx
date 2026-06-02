@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Row, Col, Card, Button, Typography, Space, Progress } from 'antd'
+import { Row, Col, Card, Button, Typography, Space, Progress, List, Tag } from 'antd'
 import {
   CodeOutlined,
   TrophyOutlined,
@@ -11,27 +11,77 @@ import {
   CrownOutlined,
   ReadOutlined,
   BulbOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  RocketOutlined,
+  CompassOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { adminService } from '../../services/admin.service'
+import { submissionService } from '../../services/submission.service'
 import { useTheme } from '../../components/common/ThemeSwitcher'
+import useCountUp from '../../hooks/useCountUp'
+import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+import 'dayjs/locale/zh-cn'
+
+dayjs.extend(relativeTime)
+dayjs.locale('zh-cn')
 
 const { Title, Paragraph, Text } = Typography
+
+const StatCard = ({ card, loading, isDark, delay }: any) => {
+  const animated = useCountUp(card.value, loading)
+  const numColor = isDark ? '#e0e0e0' : '#1a1a2e'
+  const labelColor = isDark ? 'rgba(255,255,255,0.45)' : '#8c8c8c'
+  const cardBg = isDark ? '#1f1f1f' : '#fff'
+  const cardBorder = isDark ? '#303030' : '#f0f0f0'
+
+  return (
+    <div className="stagger-fade-in" style={{ animationDelay: `${delay}s` }}>
+      <Card className={`stat-card stat-card-${card.color}`} style={{ borderRadius: 12, background: cardBg, borderColor: cardBorder }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 10,
+            background: card.gradient,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: 20,
+          }}>
+            {card.icon}
+          </div>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2, color: numColor }}>
+              {loading ? '-' : animated.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 13, color: labelColor }}>{card.title}</div>
+          </div>
+        </div>
+      </Card>
+    </div>
+  )
+}
 
 const Home = () => {
   const navigate = useNavigate()
   const [stats, setStats] = useState<any>(null)
+  const [recentSubmissions, setRecentSubmissions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { theme } = useTheme()
   const isDark = theme === 'dark'
   const user = JSON.parse(localStorage.getItem('user') || '{}')
 
-  useEffect(() => { loadStats() }, [])
+  useEffect(() => { loadData() }, [])
 
-  const loadStats = async () => {
+  const loadData = async () => {
     try {
-      const data = await adminService.getPublicStats()
-      setStats(data)
+      const [statData, subData] = await Promise.all([
+        adminService.getPublicStats(),
+        submissionService.getSubmissions({ page: 1, limit: 5 }).catch(() => []),
+      ])
+      setStats(statData)
+      setRecentSubmissions(Array.isArray(subData) ? subData.slice(0, 5) : [])
     } catch {} finally {
       setLoading(false)
     }
@@ -58,13 +108,16 @@ const Home = () => {
   const cardBg = isDark ? '#1f1f1f' : '#fff'
   const cardBorder = isDark ? '#303030' : '#f0f0f0'
   const numColor = isDark ? '#e0e0e0' : '#1a1a2e'
-  const labelColor = isDark ? 'rgba(255,255,255,0.45)' : '#8c8c8c'
-  const iconBgOpacity = isDark ? '0.15' : '1'
+
+  const statusIcon: Record<string, any> = {
+    accepted: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+    wrong_answer: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+  }
 
   return (
     <div>
       {/* Hero Banner */}
-      <div className="hero-banner" style={{ marginBottom: 24 }}>
+      <div className="hero-banner stagger-fade-in" style={{ marginBottom: 24, animationDelay: '0s' }}>
         <div style={{ position: 'relative', zIndex: 1 }}>
           <Title level={1} style={{ color: 'white', marginBottom: 8, fontSize: 32 }}>
             欢迎回来，{user.username || '同学'}！
@@ -126,60 +179,101 @@ const Home = () => {
         </div>
       </div>
 
+      {/* New user guide */}
+      {!loading && user.solved_count === 0 && (
+        <Card
+          style={{
+            marginBottom: 24, borderRadius: 12, background: isDark ? '#1f1f1f' : '#fff',
+            borderColor: isDark ? '#303030' : '#f0f0f0',
+            borderLeft: `4px solid ${isDark ? '#818cf8' : '#4f46e5'}`,
+          }}
+          className="stagger-fade-in"
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <RocketOutlined style={{ fontSize: 20, color: '#4f46e5' }} />
+            <Title level={5} style={{ margin: 0, color: numColor }}>快速开始</Title>
+          </div>
+          <Space size={16} wrap>
+            <Button type="primary" icon={<CodeOutlined />} onClick={() => navigate('/problems')}>试做第一道题</Button>
+            <Button icon={<CompassOutlined />} onClick={() => navigate('/learning-paths')}>探索学习路径</Button>
+            <Button icon={<TeamOutlined />} onClick={() => navigate('/teams')}>加入团队</Button>
+          </Space>
+        </Card>
+      )}
+
       {/* Stat Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        {statCards.map(card => (
+        {statCards.map((card, idx) => (
           <Col xs={12} sm={12} md={6} key={card.title}>
-            <Card className={`stat-card stat-card-${card.color}`} style={{ borderRadius: 12, background: cardBg, borderColor: cardBorder }} loading={loading}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: 10,
-                  background: card.gradient,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#fff', fontSize: 20, opacity: Number(iconBgOpacity) > 0 ? undefined : 0.5,
-                }}>
-                  {card.icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: 24, fontWeight: 700, lineHeight: 1.2, color: numColor }}>
-                    {typeof card.value === 'number' ? card.value.toLocaleString() : card.value}
-                  </div>
-                  <div style={{ fontSize: 13, color: labelColor }}>{card.title}</div>
-                </div>
-              </div>
-            </Card>
+            <StatCard card={card} loading={loading} isDark={isDark} delay={0.1 + idx * 0.08} />
           </Col>
         ))}
       </Row>
 
       {/* Feature Cards */}
-      <Row gutter={[16, 16]}>
-        {featureCards.map(card => (
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        {featureCards.map((card, idx) => (
           <Col xs={24} sm={12} md={8} key={card.title}>
-            <Card
-              className="feature-card"
-              hoverable
-              onClick={() => navigate(card.action)}
-              style={{ cursor: 'pointer', borderRadius: 12, background: cardBg, borderColor: cardBorder }}
-              styles={{ body: { padding: 20 } }}
-            >
-              <div className="feature-icon" style={{
-                background: isDark ? `${card.color}22` : `${card.color}15`,
-                color: card.color,
-              }}>
-                {card.icon}
-              </div>
-              <Title level={5} style={{ marginBottom: 4, color: numColor }}>{card.title}</Title>
-              <Paragraph type="secondary" style={{ marginBottom: 12, fontSize: 13, minHeight: 40 }}>
-                {card.desc}
-              </Paragraph>
-              <Button type="link" style={{ padding: 0, color: card.color, fontWeight: 600 }} icon={<ArrowRightOutlined />}>
-                {card.label}
-              </Button>
-            </Card>
+            <div className="stagger-fade-in" style={{ animationDelay: `${0.3 + idx * 0.06}s` }}>
+              <Card
+                className="feature-card"
+                hoverable
+                onClick={() => navigate(card.action)}
+                style={{ cursor: 'pointer', borderRadius: 12, background: cardBg, borderColor: cardBorder }}
+                styles={{ body: { padding: 20 } }}
+              >
+                <div className="feature-icon" style={{
+                  background: isDark ? `${card.color}22` : `${card.color}15`,
+                  color: card.color,
+                }}>
+                  {card.icon}
+                </div>
+                <Title level={5} style={{ marginBottom: 4, color: numColor }}>{card.title}</Title>
+                <Paragraph type="secondary" style={{ marginBottom: 12, fontSize: 13, minHeight: 40 }}>
+                  {card.desc}
+                </Paragraph>
+                <Button type="link" style={{ padding: 0, color: card.color, fontWeight: 600 }} icon={<ArrowRightOutlined />}>
+                  {card.label}
+                </Button>
+              </Card>
+            </div>
           </Col>
         ))}
       </Row>
+
+      {/* Recent Submissions */}
+      {recentSubmissions.length > 0 && (
+        <Card
+          title={<Space><ClockCircleOutlined />最近提交</Space>}
+          style={{ borderRadius: 12, background: cardBg, borderColor: cardBorder }}
+          extra={<Button type="link" onClick={() => navigate('/submissions')}>查看全部</Button>}
+          className="stagger-fade-in"
+        >
+          <List
+            size="small"
+            dataSource={recentSubmissions.slice(0, 5)}
+            renderItem={(sub: any) => (
+              <List.Item
+                style={{ cursor: 'pointer' }}
+                onClick={() => navigate(`/submissions/${sub.id}`)}
+              >
+                <List.Item.Meta
+                  avatar={statusIcon[sub.status] || <ClockCircleOutlined style={{ color: '#999' }} />}
+                  title={
+                    <Space>
+                      <span style={{ color: numColor }}>#{sub.id}</span>
+                      <Tag color={sub.status === 'accepted' ? 'success' : sub.status === 'wrong_answer' ? 'error' : 'processing'}>
+                        {sub.status === 'accepted' ? '通过' : sub.status === 'wrong_answer' ? '答案错误' : sub.status}
+                      </Tag>
+                    </Space>
+                  }
+                  description={`${sub.language || 'C++'} · ${dayjs(sub.created_at).fromNow()}`}
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
     </div>
   )
 }

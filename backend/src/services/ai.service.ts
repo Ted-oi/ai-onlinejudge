@@ -1,17 +1,34 @@
-import Anthropic from '@anthropic-ai/sdk'
+import axios from 'axios'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-const MODEL = 'claude-3-sonnet-20240229'
+const GLM_API_URL = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+const GLM_API_KEY = process.env.GLM_API_KEY || ''
+const GLM_MODEL = process.env.GLM_MODEL || 'glm-4-flash'
 
-async function callClaude(prompt: string, maxTokens = 2048): Promise<string> {
-  const response = await anthropic.completions.create({
-    model: MODEL,
-    max_tokens_to_sample: maxTokens,
-    prompt: `\n\nHuman: ${prompt}\n\nAssistant:`,
-  })
-  return response.completion || ''
+async function callAI(prompt: string, maxTokens = 2048): Promise<string> {
+  if (!GLM_API_KEY) {
+    throw new Error('AI 服务未配置，请在 .env 中设置 GLM_API_KEY')
+  }
+
+  const response = await axios.post(
+    GLM_API_URL,
+    {
+      model: GLM_MODEL,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
+      temperature: 0.7,
+    },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GLM_API_KEY}`,
+      },
+      timeout: 30000,
+    }
+  )
+
+  return response.data?.choices?.[0]?.message?.content || ''
 }
 
 export const chatService = {
@@ -29,7 +46,7 @@ export const chatService = {
       [conversationId, message]
     )
 
-    const aiMessage = await callClaude(message)
+    const aiMessage = await callAI(message)
 
     await query(
       "INSERT INTO ai_messages (conversation_id, role, content, type) VALUES ($1, 'assistant', $2, 'chat')",
@@ -68,7 +85,7 @@ ${code}
 ## 潜在问题
 列出可能的 bug 或边界情况遗漏。`
 
-    const analysis = await callClaude(prompt, 2048)
+    const analysis = await callAI(prompt, 2048)
     return { analysis }
   },
 
@@ -95,7 +112,7 @@ ${contextLine}
 
 请直接给出提示内容（不要包含"提示X"这样的标题，只给出提示正文）。`
 
-    const hint = await callClaude(prompt, 1024)
+    const hint = await callAI(prompt, 1024)
     return { hint }
   },
 
@@ -130,7 +147,7 @@ ${code}
 
 请用中文回答，语言简洁易懂。`
 
-    const explanation = await callClaude(prompt, 2048)
+    const explanation = await callAI(prompt, 2048)
     return { explanation }
   },
 

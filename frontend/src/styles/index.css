@@ -473,6 +473,73 @@ body.dark-theme .register-container {
   background: #141414 !important;
 }
 
+/* ========== Mobile menu button ========== */
+.mobile-menu-btn {
+  display: none;
+}
+
+/* ========== Mobile backdrop ========== */
+.mobile-backdrop {
+  display: none;
+}
+
+/* ========== Page transition ========== */
+.page-transition {
+  animation: pageFadeIn 0.25s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========== Breadcrumb ========== */
+.ant-breadcrumb {
+  font-size: 13px;
+}
+
+/* ========== Micro-interactions ========== */
+.ant-table-tbody > tr {
+  transition: background 0.15s;
+}
+
+.ant-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.ant-btn {
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.ant-btn:focus-visible,
+.ant-input:focus-visible,
+.ant-select:focus-visible,
+.ant-select-selector:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}
+
+.stat-card,
+.feature-card {
+  will-change: transform;
+}
+
+.app-sider {
+  transition: all 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* ========== Staggered animations ========== */
+.stagger-fade-in {
+  opacity: 0;
+  animation: pageFadeIn 0.4s ease-out forwards;
+}
+
 /* ========== Responsive ========== */
 @media (max-width: 768px) {
   .ant-layout-sider {
@@ -535,6 +602,14 @@ body.dark-theme .register-container {
 
   .mobile-menu-btn {
     display: inline-flex !important;
+  }
+
+  .mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 99;
   }
 
   .hero-banner {

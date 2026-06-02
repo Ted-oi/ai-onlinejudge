@@ -10,12 +10,12 @@ import rehypeKatex from 'rehype-katex'
 import 'katex/dist/katex.min.css'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
-import TestCaseManager from './TestCaseManager'
 import FavoriteButton from '../../components/problems/FavoriteButton'
 import SmartHint from '../../components/problems/SmartHint'
 import ProblemRecommendation from '../../components/problems/ProblemRecommendation'
 import DiscussionList from '../discussions/DiscussionList'
 import ArticleList from '../articles/ArticleList'
+import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 
 const { Title, Text } = Typography
 
@@ -46,7 +46,7 @@ const ProblemDetail = () => {
 
   const handleSolve = () => navigate(`/problems/${id}/submit`)
 
-  if (!problem) return <div>加载中...</div>
+  if (!problem) return <Card style={{ margin: 24 }}><LoadingSkeleton type="detail" /></Card>
 
   // Objective question detail
   if (problem.problem_type === 'objective') {
@@ -168,20 +168,13 @@ const ProblemDetail = () => {
     {
       key: 'discussions',
       label: <span><MessageOutlined /> 讨论</span>,
-      children: <DiscussionList />,
+      children: <DiscussionList problemId={problem.id} />,
     },
     {
       key: 'solutions',
       label: <span><FileTextOutlined /> 题解</span>,
       children: <ArticleList type="solution" problemId={problem.id} />,
     },
-    ...(canManage
-      ? [{
-          key: 'testcases',
-          label: '测试数据',
-          children: <TestCaseManager problemId={problem.id} />,
-        }]
-      : []),
   ]
 
   return (
