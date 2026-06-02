@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Card, Button, Typography, Select, message } from 'antd'
 import { ArrowLeftOutlined } from '@ant-design/icons'
 import { problemService } from '../../services/problem.service'
@@ -12,6 +12,8 @@ const { Title } = Typography
 const ProblemSubmit = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const contestId = searchParams.get('contest_id')
   const [problem, setProblem] = useState<Problem | null>(null)
   const [code, setCode] = useState('')
   const [language, setLanguage] = useState('cpp')
@@ -74,12 +76,11 @@ if __name__ == "__main__":
 
     try {
       setSubmitting(true)
-      const user = JSON.parse(localStorage.getItem('user') || '{}')
       const submission = await submissionService.createSubmission({
         problem_id: Number(id),
-        user_id: user.id,
         language,
         code,
+        ...(contestId ? { contest_id: Number(contestId) } : {}),
       })
       message.success('提交成功')
       navigate(`/submissions/${submission.id}`)

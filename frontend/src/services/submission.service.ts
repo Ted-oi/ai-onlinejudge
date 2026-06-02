@@ -3,9 +3,9 @@ import type { Submission } from '../types'
 
 export interface CreateSubmissionData {
   problem_id: number
-  user_id: number
   language: string
   code: string
+  contest_id?: number
 }
 
 export const submissionService = {

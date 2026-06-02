@@ -6,29 +6,32 @@ export const getUsers = async (req: Request, res: Response, next: NextFunction) 
   try {
     const { role, search, page = 1, limit = 20 } = req.query
 
-    let queryText = 'SELECT id, username, email, role, avatar, bio, rating, solved_count, submit_count FROM users WHERE 1=1'
+    let whereClause = 'WHERE 1=1'
     const params: any[] = []
     let paramCount = 1
 
     if (role) {
-      queryText += ` AND role = $${paramCount++}`
+      whereClause += ` AND role = $${paramCount++}`
       params.push(role)
     }
 
     if (search) {
-      queryText += ` AND (username ILIKE $${paramCount++} OR email ILIKE $${paramCount++})`
+      whereClause += ` AND (username ILIKE $${paramCount++} OR email ILIKE $${paramCount++})`
       params.push(`%${search}%`, `%${search}%`)
     }
 
+    const countResult = await query(`SELECT COUNT(*) as total FROM users ${whereClause}`, params)
+    const total = parseInt(countResult.rows[0].total)
+
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
-    queryText += ` ORDER BY rating DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+    const queryText = `SELECT id, username, email, role, avatar, bio, rating, solved_count, submit_count FROM users ${whereClause} ORDER BY rating DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
     params.push(parseInt(limit as string), offset)
 
     const result = await query(queryText, params)
 
     res.json({
       success: true,
-      data: { users: result.rows }
+      data: { users: result.rows, total }
     })
   } catch (error) {
     next(error)
@@ -63,6 +66,16 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
+    const currentUserId = (req as any).userId
+    const currentUserRole = (req as any).userRole
+
+    if (Number(id) !== currentUserId && currentUserRole !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: { message: '无权修改其他用户信息' }
+      })
+    }
+
     const { username, avatar, bio } = req.body
 
     const result = await query(

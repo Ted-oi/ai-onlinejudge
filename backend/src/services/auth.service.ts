@@ -6,14 +6,27 @@ import { CreateUserDTO, User } from '../models/user.model'
 export const registerUser = async (data: CreateUserDTO) => {
   const hashedPassword = await bcrypt.hash(data.password, 10)
 
-  const result = await query(
-    `INSERT INTO users (username, email, password, role)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id, username, email, role`,
-    [data.username, data.email, hashedPassword, data.role || 'student']
-  )
+  try {
+    const result = await query(
+      `INSERT INTO users (username, email, password, role)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, username, email, role, avatar, bio, rating, solved_count, submit_count, created_at`,
+      [data.username, data.email, hashedPassword, data.role || 'student']
+    )
 
-  return result.rows[0]
+    return result.rows[0]
+  } catch (error: any) {
+    if (error.code === '23505') {
+      if (error.constraint?.includes('username')) {
+        throw new Error('用户名已存在')
+      }
+      if (error.constraint?.includes('email')) {
+        throw new Error('邮箱已被注册')
+      }
+      throw new Error('注册信息重复')
+    }
+    throw error
+  }
 }
 
 export const loginUser = async (account: string, password: string) => {

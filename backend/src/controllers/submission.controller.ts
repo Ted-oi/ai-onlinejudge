@@ -6,13 +6,14 @@ import { createNotification } from './notification.controller'
 
 export const createSubmission = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { problem_id, user_id, language, code, contest_id, assignment_id } = req.body
+    const userId = (req as any).userId
+    const { problem_id, language, code, contest_id, assignment_id } = req.body
 
     const result = await query(
       `INSERT INTO submissions (problem_id, user_id, language, code, status, contest_id)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [problem_id, user_id, language, code, 'pending', contest_id || null]
+      [problem_id, userId, language, code, 'pending', contest_id || null]
     )
 
     const submission = result.rows[0]
@@ -20,7 +21,7 @@ export const createSubmission = async (req: Request, res: Response, next: NextFu
     if (contest_id) {
       await query(
         'INSERT INTO contest_submissions (contest_id, submission_id, user_id, problem_id) VALUES ($1, $2, $3, $4)',
-        [contest_id, submission.id, user_id, problem_id]
+        [contest_id, submission.id, userId, problem_id]
       )
     }
 
@@ -29,7 +30,7 @@ export const createSubmission = async (req: Request, res: Response, next: NextFu
         `INSERT INTO assignment_submissions (assignment_id, user_id, submission_id, problem_id)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (assignment_id, user_id, problem_id) DO UPDATE SET submission_id = $3, created_at = NOW()`,
-        [assignment_id, user_id, submission.id, problem_id]
+        [assignment_id, userId, submission.id, problem_id]
       )
     }
 

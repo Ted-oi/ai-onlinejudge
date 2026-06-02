@@ -13,7 +13,7 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
       data: { user }
     })
   } catch (error: any) {
-    if (error.message.includes('已存在')) {
+    if (error.message.includes('已存在') || error.message.includes('已被注册') || error.message.includes('重复')) {
       return res.status(400).json({
         success: false,
         error: { message: error.message }

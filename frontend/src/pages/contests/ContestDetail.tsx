@@ -158,7 +158,7 @@ const ContestDetail = () => {
           type="primary"
           size="small"
           icon={<CodeOutlined />}
-          onClick={() => navigate(`/problems/${record.id}/submit`)}
+          onClick={() => navigate(`/problems/${record.id}/submit?contest_id=${id}`)}
         >
           做题
         </Button>
