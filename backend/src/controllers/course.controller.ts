@@ -38,7 +38,7 @@ export const getCourses = async (req: Request, res: Response, next: NextFunction
 export const getCourseById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query('SELECT * FROM courses WHERE id = $1', [id])
 

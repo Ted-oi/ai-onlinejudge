@@ -5,7 +5,7 @@ import { getNextProblem, recommendPath } from '../services/recommendation.servic
 export const getLearningPaths = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { category, page = 1, limit = 20 } = req.query
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const conditions = ["is_published = TRUE"]
     const params: any[] = []
@@ -58,7 +58,7 @@ export const getLearningPaths = async (req: Request, res: Response, next: NextFu
 export const getLearningPathById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const pathRes = await query('SELECT * FROM learning_paths WHERE id = $1', [id])
     if (pathRes.rows.length === 0) return res.status(404).json({ success: false, error: { message: '路径不存在' } })
@@ -100,7 +100,7 @@ export const getLearningPathById = async (req: Request, res: Response, next: Nex
 
 export const createLearningPath = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { title, description, category, cover_color, estimated_hours, stages, is_published } = req.body
 
     if (!title || !category) return res.status(400).json({ success: false, error: { message: '标题和分类为必填' } })
@@ -166,7 +166,7 @@ export const deleteLearningPath = async (req: Request, res: Response, next: Next
 export const enrollInPath = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     await query(
       `INSERT INTO user_path_enrollments (user_id, path_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
@@ -179,7 +179,7 @@ export const enrollInPath = async (req: Request, res: Response, next: NextFuncti
 export const unenrollFromPath = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     await query('DELETE FROM user_path_enrollments WHERE user_id = $1 AND path_id = $2', [userId, id])
     res.json({ success: true, data: { message: '已退出' } })
   } catch (error) { next(error) }
@@ -187,7 +187,7 @@ export const unenrollFromPath = async (req: Request, res: Response, next: NextFu
 
 export const getMyEnrolledPaths = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const result = await query(
       `SELECT lp.*, upe.enrolled_at, upe.completed_at,
         (SELECT COUNT(DISTINCT lpp.problem_id) FROM learning_path_problems lpp
@@ -213,7 +213,7 @@ export const getMyEnrolledPaths = async (req: Request, res: Response, next: Next
 
 export const getNextProblemSuggestion = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const result = await getNextProblem(userId)
     res.json({ success: true, data: result })
   } catch (error) { next(error) }
@@ -221,7 +221,7 @@ export const getNextProblemSuggestion = async (req: Request, res: Response, next
 
 export const getRecommendedPath = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const result = await recommendPath(userId)
     res.json({ success: true, data: result })
   } catch (error) { next(error) }

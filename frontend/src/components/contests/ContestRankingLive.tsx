@@ -27,7 +27,7 @@ const ContestRankingLive = ({ contestId, isOngoing }: ContestRankingLiveProps) =
       setPrevStandings(prevMap)
       setStandings(newStandings)
       setLastUpdated(new Date().toLocaleTimeString())
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   useEffect(() => {

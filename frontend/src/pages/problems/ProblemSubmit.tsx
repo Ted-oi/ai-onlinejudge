@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { Card, Button, Typography, Select, message, Space } from 'antd'
+import { Card, Button, Typography, Select, message } from 'antd'
 import { ArrowLeftOutlined, FontSizeOutlined } from '@ant-design/icons'
 import { problemService } from '../../services/problem.service'
 import { submissionService } from '../../services/submission.service'

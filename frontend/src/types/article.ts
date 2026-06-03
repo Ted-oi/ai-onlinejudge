@@ -44,6 +44,7 @@ export interface ArticleQuery {
   search?: string
   problem_id?: number
   author_id?: number
+  status?: string
   page?: number
   limit?: number
   sort?: 'newest' | 'most_liked' | 'most_viewed'

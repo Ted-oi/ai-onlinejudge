@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Table, Tag, Button, Space, Modal, Card, Typography, Input, Radio, message, Avatar } from 'antd'
-import { CheckOutlined, CloseOutlined, UserOutlined } from '@ant-design/icons'
+import { Table, Tag, Button, Space, Modal, Card, Typography, Input, Radio, Tabs, Popconfirm, message, Avatar } from 'antd'
+import { CheckOutlined, CloseOutlined, UserOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -12,28 +12,45 @@ import type { Article } from '../../types/article'
 const { Text, Title } = Typography
 const { TextArea } = Input
 
+const statusConfig: Record<string, { color: string; label: string }> = {
+  pending: { color: 'gold', label: '待审核' },
+  approved: { color: 'green', label: '已通过' },
+  rejected: { color: 'red', label: '已拒绝' },
+}
+
 const AdminArticleReview = () => {
   const [articles, setArticles] = useState<Article[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [statusTab, setStatusTab] = useState<string>('pending')
   const [reviewModal, setReviewModal] = useState<Article | null>(null)
+  const [previewModal, setPreviewModal] = useState<Article | null>(null)
   const [reviewStatus, setReviewStatus] = useState<'approved' | 'rejected'>('approved')
   const [rejectReason, setRejectReason] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const fetchPending = async () => {
+  const fetchArticles = async () => {
     setLoading(true)
     try {
-      const data = await articleService.getPendingArticles({ page, limit: 15 })
+      let data: any
+      if (statusTab === 'pending') {
+        data = await articleService.getPendingArticles({ page, limit: 15 })
+      } else {
+        data = await articleService.getArticles({ status: statusTab, page, limit: 15 })
+      }
       setArticles(data.articles || [])
       setTotal(data.total || 0)
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }
 
-  useEffect(() => { fetchPending() }, [page])
+  useEffect(() => {
+    setPage(1)
+  }, [statusTab])
+
+  useEffect(() => { fetchArticles() }, [page, statusTab])
 
   const handleReview = async () => {
     if (!reviewModal) return
@@ -46,10 +63,18 @@ const AdminArticleReview = () => {
       message.success(reviewStatus === 'approved' ? '已通过' : '已拒绝')
       setReviewModal(null)
       setRejectReason('')
-      fetchPending()
-    } catch {} finally {
+      fetchArticles()
+    } catch (error) { console.error(error) } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      await articleService.deleteArticle(id)
+      message.success('删除成功')
+      fetchArticles()
+    } catch (error) { console.error(error) }
   }
 
   const columns = [
@@ -57,13 +82,13 @@ const AdminArticleReview = () => {
       title: '标题',
       dataIndex: 'title',
       key: 'title',
+      ellipsis: true,
       render: (text: string, record: Article) => (
         <Space>
           <Tag color={record.type === 'solution' ? 'green' : 'blue'}>
             {record.type === 'solution' ? '题解' : '博客'}
           </Tag>
           <span>{text}</span>
-          {record.problem_title && <Tag color="orange">{record.problem_title}</Tag>}
         </Space>
       ),
     },
@@ -79,30 +104,68 @@ const AdminArticleReview = () => {
       ),
     },
     {
-      title: '提交时间',
+      title: '状态',
+      dataIndex: 'status',
+      key: 'status',
+      width: 90,
+      render: (s: string) => {
+        const cfg = statusConfig[s]
+        return <Tag color={cfg?.color}>{cfg?.label || s}</Tag>
+      },
+    },
+    {
+      title: '点赞/评论',
+      key: 'engagement',
+      width: 100,
+      render: (_: any, record: Article) => (
+        <span>{record.like_count || 0} / {record.comment_count || 0}</span>
+      ),
+    },
+    {
+      title: '时间',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 140,
-      render: (v: string) => dayjs(v).format('YYYY-MM-DD HH:mm'),
+      render: (v: string) => dayjs(v).format('MM-DD HH:mm'),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 160,
+      width: 200,
       render: (_: any, record: Article) => (
-        <Button type="primary" size="small" onClick={() => { setReviewModal(record); setReviewStatus('approved'); setRejectReason('') }}>
-          审核
-        </Button>
+        <Space size="small" wrap>
+          <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => setPreviewModal(record)}>
+            预览
+          </Button>
+          {record.status === 'pending' && (
+            <Button type="link" size="small" onClick={() => { setReviewModal(record); setReviewStatus('approved'); setRejectReason('') }}>
+              审核
+            </Button>
+          )}
+          <Popconfirm title="确定删除此文章？" onConfirm={() => handleDelete(record.id)}>
+            <Button type="link" size="small" danger icon={<DeleteOutlined />}>
+              删除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ]
 
   return (
     <div>
-      <Title level={4}>文章审核</Title>
-      <Text type="secondary" style={{ marginBottom: 16, display: 'block' }}>
-        待审核文章 {total} 篇
-      </Text>
+      <Title level={4}>文章管理</Title>
+
+      <Tabs
+        activeKey={statusTab}
+        onChange={setStatusTab}
+        style={{ marginBottom: 16 }}
+        items={[
+          { key: 'pending', label: '待审核' },
+          { key: 'approved', label: '已通过' },
+          { key: 'rejected', label: '已拒绝' },
+        ]}
+      />
 
       <Table
         columns={columns}
@@ -118,6 +181,35 @@ const AdminArticleReview = () => {
         }}
       />
 
+      {/* Preview Modal */}
+      <Modal
+        title={previewModal?.title}
+        open={!!previewModal}
+        onCancel={() => setPreviewModal(null)}
+        width={800}
+        footer={<Button onClick={() => setPreviewModal(null)}>关闭</Button>}
+      >
+        {previewModal && (
+          <div>
+            <Space style={{ marginBottom: 12 }} wrap>
+              <Tag color={previewModal.type === 'solution' ? 'green' : 'blue'}>
+                {previewModal.type === 'solution' ? '题解' : '博客'}
+              </Tag>
+              <Tag color={statusConfig[previewModal.status]?.color}>
+                {statusConfig[previewModal.status]?.label}
+              </Tag>
+              {previewModal.tags?.map((t, i) => <Tag key={i}>{t}</Tag>)}
+            </Space>
+            <div style={{ maxHeight: 500, overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: 6, padding: 16, lineHeight: 1.8 }}>
+              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {previewModal.content}
+              </ReactMarkdown>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Review Modal */}
       <Modal
         title="审核文章"
         open={!!reviewModal}
@@ -133,11 +225,7 @@ const AdminArticleReview = () => {
                   {reviewModal.type === 'solution' ? '题解' : '博客'}
                 </Tag>
                 <Text strong>{reviewModal.title}</Text>
-                {reviewModal.problem_title && <Tag color="orange">题目: {reviewModal.problem_title}</Tag>}
               </Space>
-              {reviewModal.summary && (
-                <div style={{ marginTop: 8, color: '#666' }}>{reviewModal.summary}</div>
-              )}
               {reviewModal.tags?.length > 0 && (
                 <div style={{ marginTop: 8 }}>
                   {reviewModal.tags.map((t, i) => <Tag key={i}>{t}</Tag>)}

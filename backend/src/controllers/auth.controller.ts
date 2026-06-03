@@ -53,7 +53,7 @@ export const logout = async (req: Request, res: Response) => {
 
 export const getCurrentUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const user = await getUserById(userId)
 

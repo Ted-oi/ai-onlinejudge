@@ -29,7 +29,7 @@ export const analyzeCode = async (req: Request, res: Response, next: NextFunctio
 export const getHint = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { problem_id, level } = req.body
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const problemResult = await query('SELECT title, description FROM problems WHERE id = $1', [problem_id])
     if (problemResult.rows.length === 0) {
@@ -109,7 +109,7 @@ export const explainError = async (req: Request, res: Response, next: NextFuncti
 
 export const getRecommendations = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await chatService.getRecommendations(userId)
 

@@ -27,7 +27,7 @@ const DiscussionDetail = () => {
       const data = await discussionService.getDiscussion(Number(id))
       setDiscussion(data.discussion)
       setReplies(data.replies || [])
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }
@@ -42,7 +42,7 @@ const DiscussionDetail = () => {
       setReplies(prev => [...prev, data.reply])
       setReplyContent('')
       message.success('回复成功')
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setSubmitting(false)
     }
   }

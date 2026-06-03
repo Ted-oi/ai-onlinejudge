@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { List, Button, Typography, Space, Modal, Form, Input, Avatar, Empty, Spin } from 'antd'
 import { MessageOutlined, PushpinOutlined, PlusOutlined } from '@ant-design/icons'
 import discussionService from '../../services/discussion.service'
@@ -20,7 +20,7 @@ const DiscussionList = ({ problemId }: { problemId?: number }) => {
     try {
       const data = await discussionService.getDiscussions(problemId)
       setDiscussions(data.discussions || [])
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }

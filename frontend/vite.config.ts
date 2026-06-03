@@ -18,4 +18,17 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-antd': ['antd', '@ant-design/icons'],
+          'vendor-markdown': ['react-markdown', 'remark-math', 'rehype-katex', 'katex'],
+          'vendor-editor': ['@monaco-editor/react'],
+          'vendor-highlight': ['react-syntax-highlighter'],
+        },
+      },
+    },
+  },
 })

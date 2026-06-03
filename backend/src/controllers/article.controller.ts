@@ -7,12 +7,21 @@ import { createNotification } from './notification.controller'
 
 export const getArticles = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { type, tags, search, problem_id, author_id, page = 1, limit = 20, sort = 'newest' } = req.query
+    const { type, tags, search, problem_id, author_id, status, page = 1, limit = 20, sort = 'newest' } = req.query
+    const userRole = req.userRole
 
     // Build WHERE conditions
-    const conditions = ["a.status = 'approved'"]
+    // Admin/teacher can filter by status; others only see approved
+    const conditions: string[] = []
     const params: any[] = []
     let pc = 1
+
+    if (status && (userRole === 'admin' || userRole === 'teacher')) {
+      conditions.push(`a.status = $${pc++}`)
+      params.push(status)
+    } else {
+      conditions.push("a.status = 'approved'")
+    }
 
     if (type) { conditions.push(`a.type = $${pc++}`); params.push(type) }
     if (tags) {
@@ -49,7 +58,7 @@ export const getArticles = async (req: Request, res: Response, next: NextFunctio
     )
 
     // Check like/favorite status for current user
-    const userId = (req as any).userId
+    const userId = req.userId
     const articlesWithStatus = await Promise.all(result.rows.map(async (a: any) => {
       if (!userId) return { ...a, isLiked: false, isFavorited: false }
       const [likeRes, favRes] = await Promise.all([
@@ -76,8 +85,8 @@ export const getArticles = async (req: Request, res: Response, next: NextFunctio
 export const getArticleById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     await query('UPDATE articles SET views = views + 1 WHERE id = $1', [id])
 
@@ -118,7 +127,7 @@ export const getArticleById = async (req: Request, res: Response, next: NextFunc
 
 export const createArticle = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { type, title, content, summary, tags, problem_id } = req.body
 
     if (!type || !title || !content) {
@@ -150,8 +159,8 @@ export const createArticle = async (req: Request, res: Response, next: NextFunct
 export const updateArticle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { title, content, summary, tags } = req.body
 
     const existing = await query('SELECT author_id, status FROM articles WHERE id = $1', [id])
@@ -185,8 +194,8 @@ export const updateArticle = async (req: Request, res: Response, next: NextFunct
 export const deleteArticle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const existing = await query('SELECT author_id FROM articles WHERE id = $1', [id])
     if (existing.rows.length === 0) {
@@ -208,7 +217,7 @@ export const deleteArticle = async (req: Request, res: Response, next: NextFunct
 export const toggleLike = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const existing = await query(
       'SELECT 1 FROM article_likes WHERE article_id = $1 AND user_id = $2',
@@ -236,7 +245,7 @@ export const toggleLike = async (req: Request, res: Response, next: NextFunction
 export const toggleFavorite = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const existing = await query(
       'SELECT 1 FROM article_favorites WHERE article_id = $1 AND user_id = $2',
@@ -263,7 +272,7 @@ export const toggleFavorite = async (req: Request, res: Response, next: NextFunc
 
 export const getUserFavorites = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { page = 1, limit = 20 } = req.query
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
 
@@ -340,7 +349,7 @@ export const getComments = async (req: Request, res: Response, next: NextFunctio
 export const createComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { content, parent_id } = req.body
 
     if (!content) {
@@ -370,8 +379,8 @@ export const createComment = async (req: Request, res: Response, next: NextFunct
 export const updateComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { commentId } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { content } = req.body
 
     const existing = await query('SELECT user_id FROM article_comments WHERE id = $1', [commentId])
@@ -402,8 +411,8 @@ export const updateComment = async (req: Request, res: Response, next: NextFunct
 export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, commentId } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const existing = await query('SELECT user_id FROM article_comments WHERE id = $1', [commentId])
     if (existing.rows.length === 0) {
@@ -462,7 +471,7 @@ export const getPendingArticles = async (req: Request, res: Response, next: Next
 export const reviewArticle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const reviewerId = (req as any).userId
+    const reviewerId = req.userId
     const { status, reject_reason } = req.body
 
     if (!['approved', 'rejected'].includes(status)) {
@@ -522,7 +531,7 @@ export const getArticleTags = async (req: Request, res: Response, next: NextFunc
 
 export const getUserArticles = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { page = 1, limit = 20, status } = req.query
 
     const conditions = ['a.author_id = $1']

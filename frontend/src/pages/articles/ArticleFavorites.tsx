@@ -18,7 +18,7 @@ const ArticleFavorites = () => {
       const data = await articleService.getUserFavorites({ page, limit: 10 })
       setArticles(data.articles || [])
       setTotal(data.total || 0)
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }

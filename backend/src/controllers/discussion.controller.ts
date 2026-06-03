@@ -28,7 +28,7 @@ export const getDiscussions = async (req: Request, res: Response, next: NextFunc
 export const createDiscussion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { problemId } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { title, content } = req.body
 
     const result = await query(
@@ -82,8 +82,8 @@ export const getDiscussion = async (req: Request, res: Response, next: NextFunct
 export const updateDiscussion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { title, content, is_pinned } = req.body
 
     if (is_pinned !== undefined && userRole !== 'admin' && userRole !== 'teacher') {
@@ -114,8 +114,8 @@ export const updateDiscussion = async (req: Request, res: Response, next: NextFu
 export const deleteDiscussion = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const existing = await query('SELECT user_id FROM discussions WHERE id = $1', [id])
     if (existing.rows.length === 0) {
@@ -137,7 +137,7 @@ export const deleteDiscussion = async (req: Request, res: Response, next: NextFu
 export const createReply = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { content, parent_reply_id } = req.body
 
     const result = await query(

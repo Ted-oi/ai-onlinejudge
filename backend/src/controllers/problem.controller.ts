@@ -6,7 +6,7 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
   try {
     const { difficulty, category, tags, search, page = 1, limit = 20, problem_type } = req.query
 
-    let queryText = 'SELECT * FROM problems WHERE 1=1'
+    let queryText = 'SELECT id, title, difficulty, category, categories, time_limit, memory_limit, problem_type, problem_no, created_at FROM problems WHERE 1=1'
     const params: any[] = []
     let paramCount = 1
 
@@ -135,7 +135,7 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
     }
 
     // Hide correct answer from students
-    const userRole = (req as any).userRole
+    const userRole = req.userRole
     if (problem.objective_data && userRole === 'student') {
       const { answer, ...rest } = problem.objective_data
       problem.objective_data = rest
@@ -152,8 +152,9 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
 
 export const createProblem = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { title, description, difficulty, category, time_limit, memory_limit, examples,
+    const { title, description, difficulty, time_limit, memory_limit, examples,
             problem_type, objective_data, categories } = req.body
+    const category = req.body.category || (Array.isArray(categories) && categories.length > 0 ? categories[0] : '其他')
 
     const result = await query(
       `INSERT INTO problems (title, description, difficulty, category, categories, time_limit, memory_limit, examples, problem_type, objective_data)
@@ -176,8 +177,9 @@ export const createProblem = async (req: Request, res: Response, next: NextFunct
 export const updateProblem = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const { title, description, difficulty, category, time_limit, memory_limit, examples,
+    const { title, description, difficulty, time_limit, memory_limit, examples,
             problem_type, objective_data, categories } = req.body
+    const category = req.body.category || (Array.isArray(categories) && categories.length > 0 ? categories[0] : '其他')
 
     const result = await query(
       `UPDATE problems
@@ -232,7 +234,7 @@ export const deleteProblem = async (req: Request, res: Response, next: NextFunct
 export const toggleFavorite = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const existing = await query(
       'SELECT id FROM problem_favorites WHERE user_id = $1 AND problem_id = $2',
@@ -257,7 +259,7 @@ export const toggleFavorite = async (req: Request, res: Response, next: NextFunc
 export const checkFavorite = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       'SELECT id FROM problem_favorites WHERE user_id = $1 AND problem_id = $2',

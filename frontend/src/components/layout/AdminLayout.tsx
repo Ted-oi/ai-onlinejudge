@@ -14,6 +14,7 @@ import {
   UnorderedListOutlined,
   AuditOutlined,
   MenuOutlined,
+  ShareAltOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher, { useTheme } from '../common/ThemeSwitcher'
@@ -43,7 +44,8 @@ const AdminLayout = () => {
     { key: '/admin/courses', icon: <BookOutlined />, label: '课程管理' },
     { key: '/admin/problem-sets', icon: <UnorderedListOutlined />, label: '题单管理' },
     { key: '/admin/submissions', icon: <FileSearchOutlined />, label: '提交审查' },
-    { key: '/admin/article-review', icon: <AuditOutlined />, label: '文章审核' },
+    { key: '/admin/article-review', icon: <AuditOutlined />, label: '文章管理' },
+    { key: '/admin/code-shares', icon: <ShareAltOutlined />, label: '代码分享管理' },
     { key: '/admin/teams', icon: <TeamOutlined />, label: '团队管理' },
     { key: '/', icon: <ArrowLeftOutlined />, label: '返回前台' },
   ]

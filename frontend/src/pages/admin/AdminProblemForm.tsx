@@ -42,7 +42,7 @@ const AdminProblemForm = () => {
           type: 'choice', options: ['', '', '', ''], answer: 0,
         },
       })
-    } catch {} finally { setLoading(false) }
+    } catch (error) { console.error(error) } finally { setLoading(false) }
   }
 
   const handleSubmit = async () => {

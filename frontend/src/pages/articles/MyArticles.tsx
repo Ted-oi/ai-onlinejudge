@@ -30,7 +30,7 @@ const MyArticles = () => {
       const data = await articleService.getMyArticles(params)
       setArticles(data.articles || [])
       setTotal(data.total || 0)
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }

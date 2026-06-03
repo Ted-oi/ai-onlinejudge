@@ -27,7 +27,7 @@ const TeamList = () => {
       ])
       setMyTeams((my as any).teams || [])
       setAllTeams((all as any).teams || [])
-    } catch {} finally { setLoading(false) }
+    } catch (error) { console.error(error) } finally { setLoading(false) }
   }
 
   const handleJoinByCode = async () => {

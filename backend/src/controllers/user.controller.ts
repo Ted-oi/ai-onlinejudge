@@ -68,8 +68,8 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 export const updateUser = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const currentUserId = (req as any).userId
-    const currentUserRole = (req as any).userRole
+    const currentUserId = req.userId
+    const currentUserRole = req.userRole
 
     if (Number(id) !== currentUserId && currentUserRole !== 'admin') {
       return res.status(403).json({
@@ -308,8 +308,8 @@ export const getSolvedProblems = async (req: Request, res: Response, next: NextF
 export const uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const currentUserId = (req as any).userId
-    if (Number(id) !== currentUserId && (req as any).userRole !== 'admin') {
+    const currentUserId = req.userId
+    if (Number(id) !== currentUserId && req.userRole !== 'admin') {
       return res.status(403).json({ success: false, error: { message: '无权操作' } })
     }
 

@@ -30,7 +30,7 @@ const ObjectiveSubmit = () => {
           return
         }
         setProblem(data)
-      } catch {} finally { setLoading(false) }
+      } catch (error) { console.error(error) } finally { setLoading(false) }
     }
     fetchProblem()
   }, [id])
@@ -45,7 +45,7 @@ const ObjectiveSubmit = () => {
         code: String(selected),
       })
       setResult(res.status as 'accepted' | 'wrong_answer')
-    } catch {} finally { setSubmitting(false) }
+    } catch (error) { console.error(error) } finally { setSubmitting(false) }
   }
 
   if (loading) return <Spin style={{ display: 'block', margin: '40px auto' }} />

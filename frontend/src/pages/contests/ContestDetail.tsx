@@ -73,10 +73,10 @@ const ContestDetail = () => {
       const data = await contestService.getContestById(Number(id))
       setContest(data)
       if (data.problem_ids && data.problem_ids.length > 0) {
-        const problemList = await Promise.all(
+        const results = await Promise.allSettled(
           data.problem_ids.map(pid => problemService.getProblemById(pid))
         )
-        setProblems(problemList)
+        setProblems(results.filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled').map(r => r.value))
       }
     } catch (error) {
       message.error('获取比赛详情失败')

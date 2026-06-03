@@ -38,7 +38,7 @@ export const getSharedCodes = async (req: Request, res: Response, next: NextFunc
       [...params, parseInt(limit as string), offset]
     )
 
-    const userId = (req as any).userId
+    const userId = req.userId
     const data = await Promise.all(result.rows.map(async (row: any) => {
       if (!userId) return { ...row, isLiked: false, isPinned: false }
       const [likeRes, pinRes] = await Promise.all([
@@ -54,7 +54,7 @@ export const getSharedCodes = async (req: Request, res: Response, next: NextFunc
 
 export const getMySharedCodes = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { page = 1, limit = 20 } = req.query
     const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
 
@@ -73,7 +73,7 @@ export const getMySharedCodes = async (req: Request, res: Response, next: NextFu
 export const getSharedCodeById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     await query('UPDATE shared_codes SET views = views + 1 WHERE id = $1', [id])
 
@@ -88,7 +88,7 @@ export const getSharedCodeById = async (req: Request, res: Response, next: NextF
     }
 
     const code = result.rows[0]
-    if (!code.is_public && code.user_id !== userId && (req as any).userRole !== 'admin') {
+    if (!code.is_public && code.user_id !== userId && req.userRole !== 'admin') {
       return res.status(403).json({ success: false, error: { message: '无权查看' } })
     }
 
@@ -105,7 +105,7 @@ export const getSharedCodeById = async (req: Request, res: Response, next: NextF
 
 export const createSharedCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { problem_id, submission_id, title, description, code, language, tags, is_public } = req.body
 
     if (!title || !code || !language) {
@@ -126,8 +126,8 @@ export const createSharedCode = async (req: Request, res: Response, next: NextFu
 export const updateSharedCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { title, description, code, tags, is_public } = req.body
 
     const existing = await query('SELECT user_id FROM shared_codes WHERE id = $1', [id])
@@ -148,8 +148,8 @@ export const updateSharedCode = async (req: Request, res: Response, next: NextFu
 export const deleteSharedCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const existing = await query('SELECT user_id FROM shared_codes WHERE id = $1', [id])
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: { message: '代码不存在' } })
@@ -163,7 +163,7 @@ export const deleteSharedCode = async (req: Request, res: Response, next: NextFu
 export const toggleLike = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const existing = await query('SELECT 1 FROM shared_code_likes WHERE shared_code_id = $1 AND user_id = $2', [id, userId])
     let liked: boolean
@@ -185,7 +185,7 @@ export const toggleLike = async (req: Request, res: Response, next: NextFunction
 export const togglePin = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const existing = await query('SELECT 1 FROM shared_code_pins WHERE shared_code_id = $1 AND user_id = $2', [id, userId])
     let pinned: boolean
@@ -224,7 +224,7 @@ export const getComments = async (req: Request, res: Response, next: NextFunctio
 export const createComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { content, parent_id } = req.body
 
     if (!content) return res.status(400).json({ success: false, error: { message: '评论不能为空' } })
@@ -247,8 +247,8 @@ export const createComment = async (req: Request, res: Response, next: NextFunct
 export const deleteComment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, commentId } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const existing = await query('SELECT user_id FROM shared_code_comments WHERE id = $1', [commentId])
     if (existing.rows.length === 0) return res.status(404).json({ success: false, error: { message: '评论不存在' } })

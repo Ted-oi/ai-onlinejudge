@@ -30,7 +30,7 @@ export const getTeams = async (req: Request, res: Response, next: NextFunction) 
 
 export const getMyTeams = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const result = await query(
       `SELECT t.*, tm.role as my_role, u.username as leader_name,
         (SELECT COUNT(*) FROM team_members WHERE team_id = t.id) as member_count
@@ -45,7 +45,7 @@ export const getMyTeams = async (req: Request, res: Response, next: NextFunction
 export const getTeamById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       `SELECT t.*, u.username as leader_name FROM teams t JOIN users u ON t.leader_id = u.id WHERE t.id = $1`, [id]
@@ -69,8 +69,8 @@ export const getTeamById = async (req: Request, res: Response, next: NextFunctio
 
 export const createTeam = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { name, description, team_type, max_members, is_public } = req.body
 
     if (!name) return res.status(400).json({ success: false, error: { message: '团队名称为必填' } })
@@ -98,8 +98,8 @@ export const createTeam = async (req: Request, res: Response, next: NextFunction
 export const updateTeam = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
     const { name, description, max_members, is_public } = req.body
 
     const team = await query('SELECT leader_id FROM teams WHERE id = $1', [id])
@@ -120,8 +120,8 @@ export const updateTeam = async (req: Request, res: Response, next: NextFunction
 export const deleteTeam = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     const team = await query('SELECT leader_id FROM teams WHERE id = $1', [id])
     if (team.rows.length === 0) return res.status(404).json({ success: false, error: { message: '团队不存在' } })
@@ -135,7 +135,7 @@ export const deleteTeam = async (req: Request, res: Response, next: NextFunction
 export const joinTeam = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { invite_code } = req.body
 
     const team = await query('SELECT invite_code, max_members, is_public FROM teams WHERE id = $1', [id])
@@ -162,7 +162,7 @@ export const joinTeam = async (req: Request, res: Response, next: NextFunction) 
 export const leaveTeam = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const member = await query('SELECT role FROM team_members WHERE team_id = $1 AND user_id = $2', [id, userId])
     if (member.rows.length === 0) return res.status(404).json({ success: false, error: { message: '未加入此团队' } })
@@ -176,8 +176,8 @@ export const leaveTeam = async (req: Request, res: Response, next: NextFunction)
 export const removeMember = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id, userId: targetUserId } = req.params
-    const currentUserId = (req as any).userId
-    const userRole = (req as any).userRole
+    const currentUserId = req.userId
+    const userRole = req.userRole
 
     const team = await query('SELECT leader_id FROM teams WHERE id = $1', [id])
     if (team.rows.length === 0) return res.status(404).json({ success: false, error: { message: '团队不存在' } })
@@ -194,7 +194,7 @@ export const transferLeadership = async (req: Request, res: Response, next: Next
   try {
     const { id } = req.params
     const { new_leader_id } = req.body
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const team = await query('SELECT leader_id FROM teams WHERE id = $1', [id])
     if (team.rows.length === 0) return res.status(404).json({ success: false, error: { message: '团队不存在' } })
@@ -214,7 +214,7 @@ export const transferLeadership = async (req: Request, res: Response, next: Next
 export const generateInvite = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const team = await query('SELECT leader_id FROM teams WHERE id = $1', [id])
     if (team.rows.length === 0) return res.status(404).json({ success: false, error: { message: '团队不存在' } })
@@ -296,7 +296,7 @@ export const getGlobalTeamLeaderboard = async (req: Request, res: Response, next
 
 export const joinByCode = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { invite_code } = req.body
 
     if (!invite_code) return res.status(400).json({ success: false, error: { message: '请输入邀请码' } })

@@ -49,6 +49,7 @@ const ArticleEditor = React.lazy(() => import('./pages/articles/ArticleEditor'))
 const MyArticles = React.lazy(() => import('./pages/articles/MyArticles'))
 const ArticleFavorites = React.lazy(() => import('./pages/articles/ArticleFavorites'))
 const AdminArticleReview = React.lazy(() => import('./pages/admin/AdminArticleReview'))
+const AdminCodeShareList = React.lazy(() => import('./pages/admin/AdminCodeShareList'))
 const CodeShareList = React.lazy(() => import('./pages/codeShare/CodeShareList'))
 const CodeShareDetail = React.lazy(() => import('./pages/codeShare/CodeShareDetail'))
 const CodeShareEditor = React.lazy(() => import('./pages/codeShare/CodeShareEditor'))
@@ -163,6 +164,7 @@ function ThemedApp() {
             <Route path="problem-sets/:id/edit" element={<LazyPage><AdminProblemSetForm /></LazyPage>} />
             <Route path="submissions" element={<LazyPage><AdminSubmissionList /></LazyPage>} />
             <Route path="article-review" element={<LazyPage><AdminArticleReview /></LazyPage>} />
+            <Route path="code-shares" element={<LazyPage><AdminCodeShareList /></LazyPage>} />
             <Route path="teams" element={<LazyPage><AdminTeamList /></LazyPage>} />
             <Route path="learning-paths" element={<LazyPage><AdminLearningPathForm /></LazyPage>} />
           </Route>

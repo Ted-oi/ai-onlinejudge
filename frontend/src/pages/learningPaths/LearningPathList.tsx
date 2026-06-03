@@ -26,14 +26,14 @@ const LearningPathList = () => {
       setLoading(true)
       const data = await learningPathService.getLearningPaths({ category, limit: 50 })
       setPaths(data.paths)
-    } catch {} finally { setLoading(false) }
+    } catch (error) { console.error(error) } finally { setLoading(false) }
   }
 
   const handleEnroll = async (id: number) => {
     try {
       await learningPathService.enrollInPath(id)
       fetchPaths()
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   return (

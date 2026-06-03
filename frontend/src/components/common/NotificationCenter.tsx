@@ -18,14 +18,14 @@ const NotificationCenter = () => {
     try {
       const data = await notificationService.getUnreadCount()
       setUnreadCount(data.count)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const fetchNotifications = async () => {
     try {
       const data = await notificationService.getNotifications({ limit: 20 })
       setNotifications(data.notifications)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   useEffect(() => {

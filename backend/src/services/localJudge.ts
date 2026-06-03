@@ -206,7 +206,11 @@ export async function localJudge(
     logger.error('Local judge error', err)
     return { status: 'system_error', runtime: null, memory: null, errorMessage: err.message || '评测系统错误' }
   } finally {
-    fs.rmSync(workDir, { recursive: true, force: true })
+    try {
+      fs.rmSync(workDir, { recursive: true, force: true })
+    } catch {
+      // Windows: process may still hold file locks; best-effort cleanup
+    }
   }
 }
 

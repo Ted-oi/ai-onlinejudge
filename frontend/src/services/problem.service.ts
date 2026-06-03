@@ -67,4 +67,18 @@ export const problemService = {
     })
     return response.data.data
   },
+
+  downloadObjectiveTemplate: async (): Promise<Blob> => {
+    const response = await api.get('/objective-template', { responseType: 'blob' })
+    return response.data
+  },
+
+  importObjectiveExcel: async (file: File): Promise<{ success: number; failed: number; errors: string[] }> => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await api.post('/objective-import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return response.data.data
+  },
 }

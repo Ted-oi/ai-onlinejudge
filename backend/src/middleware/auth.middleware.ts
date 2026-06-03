@@ -14,8 +14,8 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     }
 
     const decoded = verifyToken(token)
-    ;(req as any).userId = decoded.userId
-    ;(req as any).userRole = decoded.role
+    req.userId = decoded.userId
+    req.userRole = decoded.role
 
     next()
   } catch (error) {
@@ -29,9 +29,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const userRole = (req as any).userRole
-
-    if (!roles.includes(userRole)) {
+    if (!roles.includes(req.userRole)) {
       return res.status(403).json({
         success: false,
         error: { message: '权限不足' }

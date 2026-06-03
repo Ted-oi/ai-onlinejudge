@@ -6,7 +6,7 @@ import api from '../../services/api'
 
 const { TextArea } = Input
 
-const API_BASE = 'http://localhost:5000'
+const API_BASE = ''
 
 const AdminCourseForm = () => {
   const { id } = useParams()
@@ -29,14 +29,14 @@ const AdminCourseForm = () => {
     try {
       const res = await api.get('/users', { params: { role: 'teacher', limit: 100 } })
       setTeachers(res.data.data.users || [])
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const loadProblemSets = async () => {
     try {
       const res = await api.get('/problem-sets', { params: { limit: 200 } })
       setProblemSets(res.data.data.problemSets || [])
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const loadCourse = async () => {
@@ -67,7 +67,7 @@ const AdminCourseForm = () => {
         })
       )
       setLessons(lessonsWithMaterials)
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }
@@ -122,7 +122,7 @@ const AdminCourseForm = () => {
   const removeLesson = async (index: number) => {
     const lesson = lessons[index]
     if (lesson.id) {
-      try { await api.delete(`/lessons/${lesson.id}`) } catch {}
+      try { await api.delete(`/lessons/${lesson.id}`) } catch (error) { console.error(error) }
     }
     setLessons(lessons.filter((_, i) => i !== index))
   }

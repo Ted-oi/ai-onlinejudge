@@ -19,7 +19,7 @@ import type { Course, CourseMaterial } from '../../types/course'
 
 const { Title, Text, Paragraph } = Typography
 
-const API_BASE = 'http://localhost:5000'
+const API_BASE = ''
 
 const CourseDetail = () => {
   const { id } = useParams<{ id: string }>()

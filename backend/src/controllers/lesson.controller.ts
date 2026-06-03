@@ -354,7 +354,7 @@ export const uploadMaterial = async (req: Request, res: Response, next: NextFunc
 export const updateLessonProgress = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { lessonId } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { completed, last_position } = req.body
 
     // 检查是否已有进度记录
@@ -413,7 +413,7 @@ export const updateLessonProgress = async (req: Request, res: Response, next: Ne
 export const getCourseProgress = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { courseId } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     // 获取课程的所有课次
     const lessonsResult = await query(

@@ -4,7 +4,7 @@ import { logger } from '../utils/logger'
 
 export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { unread, page = 1, limit = 20 } = req.query
 
     let queryText = 'SELECT * FROM notifications WHERE user_id = $1'
@@ -42,7 +42,7 @@ export const getNotifications = async (req: Request, res: Response, next: NextFu
 
 export const getUnreadCount = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
@@ -60,7 +60,7 @@ export const getUnreadCount = async (req: Request, res: Response, next: NextFunc
 
 export const markAsRead = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { id } = req.params
 
     await query(
@@ -76,7 +76,7 @@ export const markAsRead = async (req: Request, res: Response, next: NextFunction
 
 export const markAllAsRead = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
 
     await query(
       'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',

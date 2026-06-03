@@ -87,7 +87,7 @@ const CommentSection = ({ articleId }: { articleId: number }) => {
     try {
       const data = await articleService.getComments(articleId)
       setComments(data.comments || [])
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   useEffect(() => { fetchComments() }, [articleId])
@@ -100,7 +100,7 @@ const CommentSection = ({ articleId }: { articleId: number }) => {
       setContent('')
       fetchComments()
       message.success('评论成功')
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setSubmitting(false)
     }
   }

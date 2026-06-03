@@ -23,7 +23,7 @@ export const getAssignments = async (req: Request, res: Response, next: NextFunc
 export const createAssignment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { courseId } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
     const { title, description, problem_ids, lesson_id, start_time, end_time } = req.body
 
     const result = await query(
@@ -42,7 +42,7 @@ export const createAssignment = async (req: Request, res: Response, next: NextFu
 export const getAssignment = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       `SELECT a.*, u.username as creator_name FROM assignments a

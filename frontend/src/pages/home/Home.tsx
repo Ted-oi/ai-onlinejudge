@@ -82,7 +82,7 @@ const Home = () => {
       ])
       setStats(statData)
       setRecentSubmissions(Array.isArray(subData) ? subData.slice(0, 5) : [])
-    } catch {} finally {
+    } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
   }

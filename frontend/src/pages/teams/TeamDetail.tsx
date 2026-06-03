@@ -42,7 +42,7 @@ const TeamDetail = () => {
       setMembers(m.members)
       setStats(s)
       setLeaderboard(l.leaderboard)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const handleLeave = async () => {

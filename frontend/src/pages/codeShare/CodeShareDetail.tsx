@@ -34,7 +34,7 @@ const CodeShareDetail = () => {
     try {
       const data = await codeShareService.getComments(Number(id))
       setComments(data.comments)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const handleLike = async () => {

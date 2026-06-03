@@ -6,7 +6,7 @@ import { createNotification } from './notification.controller'
 
 export const createSubmission = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
+    const userId = req.userId
     const { problem_id, language, code, contest_id, assignment_id } = req.body
 
     // Check problem type for objective questions
@@ -114,7 +114,8 @@ export const getSubmissions = async (req: Request, res: Response, next: NextFunc
   try {
     const { problem_id, user_id, status, page = 1, limit = 20 } = req.query
 
-    let queryText = `SELECT s.*, p.title as problem_title, p.problem_no, u.username
+    let queryText = `SELECT s.id, s.problem_id, s.user_id, s.language, s.status, s.runtime, s.memory, s.created_at, s.contest_id,
+       p.title as problem_title, p.problem_no, u.username
        FROM submissions s
        LEFT JOIN problems p ON s.problem_id = p.id
        LEFT JOIN users u ON s.user_id = u.id

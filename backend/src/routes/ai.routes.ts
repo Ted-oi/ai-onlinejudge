@@ -10,7 +10,7 @@ router.post('/hint', authenticate, aiController.getHint)
 router.post('/explain-error', authenticate, aiController.explainError)
 router.get('/recommendations', authenticate, aiController.getRecommendations)
 router.get('/conversations/:userId', authenticate, (req, res, next) => {
-  if ((req as any).userId !== parseInt(req.params.userId) && (req as any).userRole !== 'admin') {
+  if (req.userId !== parseInt(req.params.userId) && req.userRole !== 'admin') {
     return res.status(403).json({ success: false, error: { message: '无权访问他人的对话' } })
   }
   next()

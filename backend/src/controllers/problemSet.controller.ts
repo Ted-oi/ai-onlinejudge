@@ -4,8 +4,8 @@ import { query } from '../config/database'
 export const getProblemSets = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { category, difficulty, search, page = 1, limit = 20 } = req.query
-    const userId = (req as any).userId
-    const userRole = (req as any).userRole
+    const userId = req.userId
+    const userRole = req.userRole
 
     let whereClause = 'WHERE 1=1'
     const params: any[] = []
@@ -82,7 +82,7 @@ export const getProblemSets = async (req: Request, res: Response, next: NextFunc
 export const getProblemSetById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params
-    const userId = (req as any).userId
+    const userId = req.userId
 
     const result = await query(
       `SELECT ps.*, u.username as creator_name
@@ -146,8 +146,9 @@ export const getProblemSetById = async (req: Request, res: Response, next: NextF
 
 export const createProblemSet = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = (req as any).userId
-    const { title, description, category, difficulty, cover_color, problem_ids, is_published } = req.body
+    const userId = req.userId
+    const { title, description, difficulty, cover_color, problem_ids, is_published } = req.body
+    const category = req.body.category || '未分类'
 
     const result = await query(
       `INSERT INTO problem_sets (title, description, category, difficulty, cover_color, problem_ids, creator_id, is_published)

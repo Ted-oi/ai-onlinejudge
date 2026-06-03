@@ -136,6 +136,10 @@ app.post('/api/plagiarism/:problemId', authenticate, authorize('admin', 'teacher
 app.get('/api/problems-export', authenticate, authorize('admin', 'teacher'), importExportController.exportProblems)
 app.post('/api/problems-import', authenticate, authorize('admin', 'teacher'), importExportController.importProblems)
 
+// Objective question Excel import
+app.get('/api/objective-template', authenticate, authorize('admin', 'teacher'), importExportController.downloadObjectiveTemplate)
+app.post('/api/objective-import', authenticate, authorize('admin', 'teacher'), importExportController.excelUpload.single('file'), importExportController.importObjectiveExcel)
+
 // 测试用例文件上传（.in/.out/.zip）
 const testcaseUpload = multer({
   dest: 'uploads/temp',

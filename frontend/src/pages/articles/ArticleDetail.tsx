@@ -38,7 +38,7 @@ const ArticleDetail = () => {
     try {
       const data = await articleService.toggleLike(article.id)
       setArticle(prev => prev ? { ...prev, isLiked: data.liked, like_count: data.like_count } : prev)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const handleFavorite = async () => {
@@ -46,7 +46,7 @@ const ArticleDetail = () => {
     try {
       const data = await articleService.toggleFavorite(article.id)
       setArticle(prev => prev ? { ...prev, isFavorited: data.favorited, favorite_count: data.favorite_count } : prev)
-    } catch {}
+    } catch (error) { console.error(error) }
   }
 
   const handleDelete = async () => {
