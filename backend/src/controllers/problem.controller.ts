@@ -1,109 +1,121 @@
 import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { problemCache } from '../config/cache'
 
 export const getProblems = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { difficulty, category, tags, search, page = 1, limit = 20, problem_type } = req.query
 
-    let queryText = 'SELECT id, title, difficulty, category, categories, time_limit, memory_limit, problem_type, problem_no, created_at FROM problems WHERE 1=1'
-    const params: any[] = []
-    let paramCount = 1
+    // Build a cache key from the filter parameters
+    const filterKey = `${difficulty || ''}:${category || ''}:${tags || ''}:${search || ''}:${page}:${limit}:${problem_type || ''}`
 
-    if (problem_type) {
-      queryText += ` AND problem_type = $${paramCount++}`
-      params.push(problem_type)
-    }
+    // Skip cache for search queries (highly variable)
+    const useCache = !search
 
-    if (difficulty) {
-      queryText += ` AND difficulty = $${paramCount++}`
-      params.push(difficulty)
-    }
+    const fetchData = async () => {
+      let queryText = 'SELECT id, title, difficulty, category, categories, time_limit, memory_limit, problem_type, problem_no, created_at FROM problems WHERE 1=1'
+      const params: any[] = []
+      let paramCount = 1
 
-    if (category) {
-      queryText += ` AND categories @> $${paramCount++}::jsonb`
-      params.push(JSON.stringify([category]))
-    }
+      if (problem_type) {
+        queryText += ` AND problem_type = $${paramCount++}`
+        params.push(problem_type)
+      }
 
-    // Support multiple tags: ?tags=dp,greedy,graph
-    if (tags) {
-      const tagList = String(tags).split(',').filter(t => t)
-      if (tagList.length > 0) {
+      if (difficulty) {
+        queryText += ` AND difficulty = $${paramCount++}`
+        params.push(difficulty)
+      }
+
+      if (category) {
         queryText += ` AND categories @> $${paramCount++}::jsonb`
-        params.push(JSON.stringify(tagList))
+        params.push(JSON.stringify([category]))
       }
-    }
 
-    if (search) {
-      const searchNum = Number(search)
-      if (!isNaN(searchNum) && search !== '') {
-        queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount} OR problem_no = $${paramCount + 1} OR id = $${paramCount + 1})`
-        params.push(`%${search}%`, searchNum)
-        paramCount += 2
-      } else {
-        queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
-        params.push(`%${search}%`, `%${search}%`)
+      // Support multiple tags: ?tags=dp,greedy,graph
+      if (tags) {
+        const tagList = String(tags).split(',').filter(t => t)
+        if (tagList.length > 0) {
+          queryText += ` AND categories @> $${paramCount++}::jsonb`
+          params.push(JSON.stringify(tagList))
+        }
       }
-    }
 
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
-    queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
-    params.push(parseInt(limit as string), offset)
+      if (search) {
+        const searchNum = Number(search)
+        if (!isNaN(searchNum) && search !== '') {
+          queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount} OR problem_no = $${paramCount + 1} OR id = $${paramCount + 1})`
+          params.push(`%${search}%`, searchNum)
+          paramCount += 2
+        } else {
+          queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
+          params.push(`%${search}%`, `%${search}%`)
+        }
+      }
 
-    const result = await query(queryText, params)
+      const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
+      queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+      params.push(parseInt(limit as string), offset)
 
-    let countText = 'SELECT COUNT(*) as total FROM problems WHERE 1=1'
-    const countParams: any[] = []
-    let countParam = 1
-    if (problem_type) {
-      countText += ` AND problem_type = $${countParam++}`
-      countParams.push(problem_type)
-    }
-    if (difficulty) {
-      countText += ` AND difficulty = $${countParam++}`
-      countParams.push(difficulty)
-    }
-    if (category) {
-      countText += ` AND categories @> $${countParam++}::jsonb`
-      countParams.push(JSON.stringify([category]))
-    }
-    if (tags) {
-      const tagList = String(tags).split(',').filter(t => t)
-      if (tagList.length > 0) {
+      const result = await query(queryText, params)
+
+      let countText = 'SELECT COUNT(*) as total FROM problems WHERE 1=1'
+      const countParams: any[] = []
+      let countParam = 1
+      if (problem_type) {
+        countText += ` AND problem_type = $${countParam++}`
+        countParams.push(problem_type)
+      }
+      if (difficulty) {
+        countText += ` AND difficulty = $${countParam++}`
+        countParams.push(difficulty)
+      }
+      if (category) {
         countText += ` AND categories @> $${countParam++}::jsonb`
-        countParams.push(JSON.stringify(tagList))
+        countParams.push(JSON.stringify([category]))
       }
-    }
-    if (search) {
-      const searchNum = Number(search)
-      if (!isNaN(searchNum) && search !== '') {
-        countText += ` AND (title ILIKE $${countParam} OR description ILIKE $${countParam} OR problem_no = $${countParam + 1} OR id = $${countParam + 1})`
-        countParams.push(`%${search}%`, searchNum)
-        countParam += 2
-      } else {
-        countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
-        countParams.push(`%${search}%`, `%${search}%`)
+      if (tags) {
+        const tagList = String(tags).split(',').filter(t => t)
+        if (tagList.length > 0) {
+          countText += ` AND categories @> $${countParam++}::jsonb`
+          countParams.push(JSON.stringify(tagList))
+        }
       }
-    }
-    const countResult = await query(countText, countParams)
+      if (search) {
+        const searchNum = Number(search)
+        if (!isNaN(searchNum) && search !== '') {
+          countText += ` AND (title ILIKE $${countParam} OR description ILIKE $${countParam} OR problem_no = $${countParam + 1} OR id = $${countParam + 1})`
+          countParams.push(`%${search}%`, searchNum)
+          countParam += 2
+        } else {
+          countText += ` AND (title ILIKE $${countParam++} OR description ILIKE $${countParam++})`
+          countParams.push(`%${search}%`, `%${search}%`)
+        }
+      }
+      const countResult = await query(countText, countParams)
 
-    // 深度修复examples字段的格式问题
-    const problems = result.rows.map((problem: any) => {
-      if (problem.examples && Array.isArray(problem.examples)) {
-        // 确保每个example对象都有完整的input和output字段
-        problem.examples = problem.examples
-          .filter((example: any) => example && typeof example.input === 'string' && typeof example.output === 'string')
-          .map((example: any) => ({ input: String(example.input), output: String(example.output) }))
-        logger.info(`Problem ${problem.id} examples count: ${problem.examples.length}`)
-      } else {
-        problem.examples = []
-      }
-      return problem
-    })
+      const problems = result.rows.map((problem: any) => {
+        if (problem.examples && Array.isArray(problem.examples)) {
+          problem.examples = problem.examples
+            .filter((example: any) => example && typeof example.input === 'string' && typeof example.output === 'string')
+            .map((example: any) => ({ input: String(example.input), output: String(example.output) }))
+        } else {
+          problem.examples = []
+        }
+        return problem
+      })
+
+      return { problems, total: parseInt(countResult.rows[0].total) }
+    }
+
+    const data = useCache
+      ? await problemCache.getList(filterKey, fetchData)
+      : await fetchData()
 
     res.json({
       success: true,
-      data: { problems, total: parseInt(countResult.rows[0].total) }
+      data
     })
   } catch (error) {
     next(error)
@@ -114,24 +126,28 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
   try {
     const { id } = req.params
 
-    const result = await query('SELECT * FROM problems WHERE id = $1', [id])
+    const fetchProblem = async () => {
+      const result = await query('SELECT * FROM problems WHERE id = $1', [id])
+      if (result.rows.length === 0) return null
 
-    if (result.rows.length === 0) {
+      const problem = result.rows[0]
+      if (problem.examples && Array.isArray(problem.examples)) {
+        problem.examples = problem.examples
+          .filter((example: any) => example && typeof example.input === 'string' && typeof example.output === 'string')
+          .map((example: any) => ({ input: String(example.input), output: String(example.output) }))
+      } else {
+        problem.examples = []
+      }
+      return problem
+    }
+
+    const problem = await problemCache.getDetail(Number(id), fetchProblem)
+
+    if (!problem) {
       return res.status(404).json({
         success: false,
         error: { message: '题目不存在' }
       })
-    }
-
-    // 深度修复examples字段的格式问题
-    const problem = result.rows[0]
-    if (problem.examples && Array.isArray(problem.examples)) {
-      // 确保每个example对象都有完整的input和output字段
-      problem.examples = problem.examples
-        .filter((example: any) => example && typeof example.input === 'string' && typeof example.output === 'string')
-        .map((example: any) => ({ input: String(example.input), output: String(example.output) }))
-    } else {
-      problem.examples = []
     }
 
     // Hide correct answer from students
@@ -200,6 +216,8 @@ export const updateProblem = async (req: Request, res: Response, next: NextFunct
       })
     }
 
+    await problemCache.invalidateProblem(Number(id))
+
     res.json({
       success: true,
       data: { problem: result.rows[0] }
@@ -221,6 +239,8 @@ export const deleteProblem = async (req: Request, res: Response, next: NextFunct
         error: { message: '题目不存在' }
       })
     }
+
+    await problemCache.invalidateProblem(Number(id))
 
     res.json({
       success: true,

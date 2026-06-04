@@ -5,6 +5,7 @@ import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOut
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
+import { getSocket } from '../../services/socket'
 import ErrorExplanation from '../../components/problems/ErrorExplanation'
 import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 
@@ -44,17 +45,35 @@ const SubmissionDetail = () => {
       fetchSubmission()
     }
 
+    // WebSocket listener for real-time judge result
+    const socket = getSocket()
+    const onJudgeResult = (data: { submissionId: number; status: string; runtime: number | null; memory: number | null }) => {
+      if (data.submissionId === Number(id)) {
+        setSubmission((prev: any) => {
+          if (!prev) return prev
+          return { ...prev, status: data.status, runtime: data.runtime, memory: data.memory }
+        })
+      }
+    }
+    socket.on('submission:judged', onJudgeResult)
+
+    // Fallback polling for non-final states (10s, less aggressive)
+    if (submission && !FINAL_STATUSES.includes(submission.status) && !pollingRef.current) {
+      pollingRef.current = setInterval(fetchSubmission, 10000)
+    }
+
     return () => {
+      socket.off('submission:judged', onJudgeResult)
       if (pollingRef.current) {
         clearInterval(pollingRef.current)
       }
     }
   }, [id])
 
-  // Start polling when submission is in a non-final state
+  // Start fallback polling when submission is in a non-final state
   useEffect(() => {
     if (submission && !FINAL_STATUSES.includes(submission.status) && !pollingRef.current) {
-      pollingRef.current = setInterval(fetchSubmission, 1500)
+      pollingRef.current = setInterval(fetchSubmission, 10000)
     }
   }, [submission?.status])
 

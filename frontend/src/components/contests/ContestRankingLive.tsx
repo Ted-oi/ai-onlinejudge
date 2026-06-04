@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Table, Tag, Typography, Space } from 'antd'
 import { ArrowUpOutlined, ArrowDownOutlined, MinusOutlined } from '@ant-design/icons'
 import contestService from '../../services/contest.service'
+import { getSocket } from '../../services/socket'
 
 const { Text } = Typography
 
@@ -32,10 +33,23 @@ const ContestRankingLive = ({ contestId, isOngoing }: ContestRankingLiveProps) =
 
   useEffect(() => {
     fetchStandings()
+
+    // WebSocket real-time listener for contest standings
+    const socket = getSocket()
+    const onStandingsUpdate = () => { fetchStandings() }
+
     if (isOngoing) {
-      pollRef.current = setInterval(fetchStandings, 30000)
+      socket.emit('join:contest', contestId)
+      socket.on('contest:standings', onStandingsUpdate)
+      // Fallback polling (60s)
+      pollRef.current = setInterval(fetchStandings, 60000)
     }
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+
+    return () => {
+      socket.emit('leave:contest', contestId)
+      socket.off('contest:standings', onStandingsUpdate)
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
   }, [contestId, isOngoing])
 
   const getRankChange = (username: string, currentRank: number) => {
@@ -83,7 +97,7 @@ const ContestRankingLive = ({ contestId, isOngoing }: ContestRankingLiveProps) =
       />
       {isOngoing && lastUpdated && (
         <Text type="secondary" style={{ fontSize: 12, marginTop: 8, display: 'block' }}>
-          最后更新：{lastUpdated}（每30秒自动刷新）
+          最后更新：{lastUpdated}（实时更新）
         </Text>
       )}
     </div>

@@ -27,7 +27,11 @@ import articleRoutes from './routes/article.routes'
 import codeShareRoutes from './routes/codeShare.routes'
 import learningPathRoutes from './routes/learningPath.routes'
 import teamRoutes from './routes/team.routes'
+import testgenRoutes from './routes/testgen.routes'
 import * as adminController from './controllers/admin.controller'
+import { createServer } from 'http'
+import { initSocketIO } from './config/socket'
+import { connectRedis } from './config/redis'
 import * as plagiarismController from './controllers/plagiarism.controller'
 import * as importExportController from './controllers/problemImportExport.controller'
 import multer from 'multer'
@@ -129,6 +133,9 @@ app.use('/api/code-shares', codeShareRoutes)
 app.use('/api/learning-paths', learningPathRoutes)
 app.use('/api/teams', teamRoutes)
 
+// AI test case generation
+app.use('/api/problems/:id/generate-test-cases', testgenRoutes)
+
 // Plagiarism detection
 app.post('/api/plagiarism/:problemId', authenticate, authorize('admin', 'teacher'), plagiarismController.checkPlagiarism)
 
@@ -192,7 +199,13 @@ app.post('/api/materials/upload', authenticate, upload.single('file'), (req, res
 app.use(notFoundHandler)
 app.use(errorHandler)
 
-app.listen(PORT, () => {
+const server = createServer(app)
+initSocketIO(server)
+
+// Connect to Redis (falls back to memory cache if unavailable)
+connectRedis().catch(() => {})
+
+server.listen(PORT, () => {
   logger.info(`Server is running on port ${PORT}`)
   logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`)
 })

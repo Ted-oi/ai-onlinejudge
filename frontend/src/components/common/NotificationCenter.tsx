@@ -3,6 +3,7 @@ import { Badge, Dropdown, List, Button, Empty, Typography, Space } from 'antd'
 import { BellOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import notificationService from '../../services/notification.service'
+import { getSocket } from '../../services/socket'
 import dayjs from 'dayjs'
 
 const { Text } = Typography
@@ -30,8 +31,19 @@ const NotificationCenter = () => {
 
   useEffect(() => {
     fetchUnreadCount()
-    pollRef.current = setInterval(fetchUnreadCount, 30000)
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+
+    // WebSocket real-time listener
+    const socket = getSocket()
+    const onNewNotification = () => { fetchUnreadCount() }
+    socket.on('notification:new', onNewNotification)
+
+    // Fallback polling (60s, less frequent since WebSocket handles real-time)
+    pollRef.current = setInterval(fetchUnreadCount, 60000)
+
+    return () => {
+      socket.off('notification:new', onNewNotification)
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
   }, [])
 
   useEffect(() => {

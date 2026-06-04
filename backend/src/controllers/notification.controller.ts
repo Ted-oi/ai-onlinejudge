@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { emitToUser } from '../services/ws.service'
 
 export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -101,6 +102,7 @@ export async function createNotification(
       'INSERT INTO notifications (user_id, type, title, content, link) VALUES ($1, $2, $3, $4, $5)',
       [userId, type, title, content, link || null]
     )
+    emitToUser(userId, 'notification:new', { type, title, content, link })
   } catch (error) {
     logger.error('Create notification error', error)
   }

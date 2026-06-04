@@ -4,6 +4,7 @@ import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { localJudge, isLocalJudgeAvailable } from './localJudge'
 import { createNotification } from '../controllers/notification.controller'
+import { emitToUser, emitToContest } from './ws.service'
 
 const JUDGE_SERVER_URL = process.env.JUDGE_SERVER_URL || 'http://localhost:8000'
 const JUDGE_SERVER_TOKEN = process.env.JUDGE_SERVER_TOKEN || 'onlinejudge-judge-secret-2024'
@@ -277,6 +278,15 @@ export const judgeService = {
         [judgeResult.status, judgeResult.runtime, judgeResult.memory, judgeResult.errorMessage, submissionId]
       )
 
+      // WebSocket: push judge result to submitter
+      emitToUser(submission.user_id, 'submission:judged', {
+        submissionId,
+        problemId: submission.problem_id,
+        status: judgeResult.status,
+        runtime: judgeResult.runtime,
+        memory: judgeResult.memory,
+      })
+
       await judgeService.updateUserStats(submission.user_id, judgeResult.status)
 
       const problemResult2 = await query('SELECT title FROM problems WHERE id = $1', [submission.problem_id])
@@ -297,6 +307,11 @@ export const judgeService = {
       }
 
       await judgeService.updateSkillAndActivity(submission.user_id, submission.problem_id, judgeResult.status)
+
+      // WebSocket: push contest standings update if submission is in a contest
+      if (submission.contest_id) {
+        emitToContest(submission.contest_id, 'contest:standings', { contestId: submission.contest_id })
+      }
     } catch (error: any) {
       logger.error('Process submission error', error)
       await query(

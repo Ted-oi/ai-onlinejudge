@@ -1,0 +1,6 @@
+process.env.JWT_SECRET = 'test-secret-key'
+process.env.DB_TYPE = 'memory'
+process.env.DB_HOST = ''
+process.env.GLM_API_KEY = ''
+process.env.GLM_MODEL = 'glm-4-flash'
+process.env.NODE_ENV = 'test'

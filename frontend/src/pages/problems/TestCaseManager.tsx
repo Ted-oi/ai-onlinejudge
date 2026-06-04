@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Modal, Form, Input, Switch, Space, Tag, Popconfirm, message, Upload, Card } from 'antd'
+import { Table, Button, Modal, Form, Input, Switch, Space, Tag, Popconfirm, message, Upload, Card, Divider } from 'antd'
 import { PlusOutlined, DeleteOutlined, EditOutlined, UploadOutlined, InboxOutlined } from '@ant-design/icons'
 import api from '../../services/api'
+import AITestCaseGenerator from '../../components/problems/AITestCaseGenerator'
 
 interface TestCase {
   id: number
@@ -240,6 +241,11 @@ const TestCaseManager = ({ problemId }: Props) => {
           </p>
         </Upload.Dragger>
       </Card>
+
+      <Divider orientation="left" style={{ fontSize: 14 }}>AI 生成测试用例</Divider>
+      <AITestCaseGenerator problemId={problemId} onSaved={fetchTestCases} />
+
+      <Divider orientation="left" style={{ fontSize: 14, marginTop: 24 }}>已有测试用例</Divider>
 
       <Table
         columns={columns}
