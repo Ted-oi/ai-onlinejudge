@@ -44,8 +44,14 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
 
       if (search) {
         const searchNum = Number(search)
-        if (!isNaN(searchNum) && search !== '') {
-          queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount} OR problem_no = $${paramCount + 1} OR id = $${paramCount + 1})`
+        const searchUpper = search.toUpperCase()
+        const isPTFormat = /^[PT]\d+$/i.test(search)
+        if (isPTFormat) {
+          queryText += ` AND (title ILIKE $${paramCount} OR problem_no = $${paramCount + 1})`
+          params.push(`%${search}%`, searchUpper)
+          paramCount += 2
+        } else if (!isNaN(searchNum) && search !== '') {
+          queryText += ` AND (title ILIKE $${paramCount} OR description ILIKE $${paramCount} OR id = $${paramCount + 1})`
           params.push(`%${search}%`, searchNum)
           paramCount += 2
         } else {
@@ -55,7 +61,7 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
       }
 
       const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
-      queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+      queryText += ` ORDER BY problem_no ASC LIMIT $${paramCount++} OFFSET $${paramCount++}`
       params.push(parseInt(limit as string), offset)
 
       const result = await query(queryText, params)
@@ -84,8 +90,14 @@ export const getProblems = async (req: Request, res: Response, next: NextFunctio
       }
       if (search) {
         const searchNum = Number(search)
-        if (!isNaN(searchNum) && search !== '') {
-          countText += ` AND (title ILIKE $${countParam} OR description ILIKE $${countParam} OR problem_no = $${countParam + 1} OR id = $${countParam + 1})`
+        const searchUpper = search.toUpperCase()
+        const isPTFormat = /^[PT]\d+$/i.test(search)
+        if (isPTFormat) {
+          countText += ` AND (title ILIKE $${countParam} OR problem_no = $${countParam + 1})`
+          countParams.push(`%${search}%`, searchUpper)
+          countParam += 2
+        } else if (!isNaN(searchNum) && search !== '') {
+          countText += ` AND (title ILIKE $${countParam} OR description ILIKE $${countParam} OR id = $${countParam + 1})`
           countParams.push(`%${search}%`, searchNum)
           countParam += 2
         } else {
@@ -171,14 +183,20 @@ export const createProblem = async (req: Request, res: Response, next: NextFunct
     const { title, description, difficulty, time_limit, memory_limit, examples,
             problem_type, objective_data, categories } = req.body
     const category = req.body.category || (Array.isArray(categories) && categories.length > 0 ? categories[0] : '其他')
+    const pType = problem_type || 'coding'
+    const prefix = pType === 'objective' ? 'T' : 'P'
+
+    const maxNoResult = await query(`SELECT COALESCE(MAX(CAST(SUBSTRING(problem_no, 2) AS INTEGER)), 0) as max_no FROM problems WHERE problem_no ~ $1`, [`${prefix}\\d+`])
+    const nextNo = maxNoResult.rows[0].max_no + 1
+    const problemNo = `${prefix}${String(nextNo).padStart(5, '0')}`
 
     const result = await query(
-      `INSERT INTO problems (title, description, difficulty, category, categories, time_limit, memory_limit, examples, problem_type, objective_data)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO problems (title, description, difficulty, category, categories, time_limit, memory_limit, examples, problem_type, objective_data, problem_no)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [title, description, difficulty, category, JSON.stringify(categories || []),
        time_limit || 0, memory_limit || 0, JSON.stringify(examples || []),
-       problem_type || 'coding', objective_data ? JSON.stringify(objective_data) : null]
+       pType, objective_data ? JSON.stringify(objective_data) : null, problemNo]
     )
 
     res.status(201).json({

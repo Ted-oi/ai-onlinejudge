@@ -67,7 +67,7 @@ const AdminSubmissionList = () => {
       title: '题目',
       dataIndex: 'problem_title',
       width: 160,
-      render: (title: string, record: any) => title || `P${String(record.problem_id).padStart(4, '0')}`,
+      render: (title: string, record: any) => title || record.problem_no || `P${record.problem_id}`,
     },
     {
       title: '语言',

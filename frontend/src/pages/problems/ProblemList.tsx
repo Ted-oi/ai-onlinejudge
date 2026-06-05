@@ -4,7 +4,7 @@ import { SearchOutlined, PlusOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { problemService } from '../../services/problem.service'
 import type { Problem } from '../../types'
-import { PROBLEM_CATEGORIES, ProblemCategory } from '../../types/problem'
+import { PROBLEM_CATEGORIES } from '../../types/problem'
 import { useTheme } from '../../components/common/ThemeSwitcher'
 
 const { Title, Text } = Typography
@@ -14,6 +14,7 @@ const sectionConfig: Record<string, { emoji: string; label: string; color: strin
   syntax: { emoji: '🔤', label: '语法基础', color: '#0891b2', activeBg: '#ecfeff', activeBorder: '#a5f3fc' },
   algorithm: { emoji: '🧩', label: '算法基础（入门级）', color: '#7c3aed', activeBg: '#f5f3ff', activeBorder: '#c4b5fd' },
   algorithm_advanced: { emoji: '🏆', label: '算法提高（提高级）', color: '#dc2626', activeBg: '#fef2f2', activeBorder: '#fca5a5' },
+  dynamic: { emoji: '🏷️', label: '热门标签', color: '#059669', activeBg: '#ecfdf5', activeBorder: '#a7f3d0' },
 }
 
 const ProblemList = () => {
@@ -55,10 +56,7 @@ const ProblemList = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      // Strip P prefix for ID search: "P0001" -> "1", "P445" -> "445"
-      const trimmed = searchInput.trim()
-      const cleaned = /^p(\d+)$/i.test(trimmed) ? trimmed.replace(/^p/i, '') : trimmed
-      setFilters(prev => ({ ...prev, search: cleaned }))
+      setFilters(prev => ({ ...prev, search: searchInput.trim() }))
     }, 400)
     return () => clearTimeout(timer)
   }, [searchInput])
@@ -73,12 +71,33 @@ const ProblemList = () => {
     }
   }
 
-  const formatProblemId = (no: number) => `P${String(no).padStart(4, '0')}`
+  const formatProblemId = (no: string | number) => no ? String(no) : ''
+
+  // Build tag frequency map from all problems
+  const tagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    allProblems.forEach(p => {
+      if (p.categories && Array.isArray(p.categories)) {
+        p.categories.forEach(tag => {
+          counts[tag] = (counts[tag] || 0) + 1
+        })
+      }
+    })
+    return counts
+  }, [allProblems])
+
+  // Find tags not in predefined categories
+  const dynamicTags = useMemo(() => {
+    const predefinedIds = new Set(PROBLEM_CATEGORIES.map(c => c.id))
+    return Object.entries(tagCounts)
+      .filter(([tag]) => !predefinedIds.has(tag))
+      .sort((a, b) => b[1] - a[1])
+  }, [tagCounts])
 
   const columns = [
     {
       title: 'ID', dataIndex: 'problem_no', key: 'id', width: 80,
-      render: (no: number) => <Text code style={{ fontSize: 12 }}>{formatProblemId(no)}</Text>,
+      render: (no: string) => <Text code style={{ fontSize: 12 }}>{formatProblemId(no)}</Text>,
     },
     {
       title: '标题', dataIndex: 'title', key: 'title',
@@ -116,15 +135,15 @@ const ProblemList = () => {
         return (
           <Space size={3}>
             {categories.slice(0, 2).map(cat => {
-              const category = PROBLEM_CATEGORIES.find(c => c.id === cat)
-              const sec = sectionConfig[category?.section || 'syntax']
+              const predefined = PROBLEM_CATEGORIES.find(c => c.id === cat)
+              const displayName = predefined?.name || cat
               return (
                 <span key={cat} style={{
                   padding: '1px 6px', borderRadius: 4, fontSize: 11, lineHeight: '18px',
-                  background: isDark ? `${sec?.color}18` : `${sec?.color}10`,
-                  color: sec?.color, fontWeight: 500,
+                  background: isDark ? '#7c3aed18' : '#7c3aed10',
+                  color: '#7c3aed', fontWeight: 500,
                 }}>
-                  {category?.name || cat}
+                  {displayName}
                 </span>
               )
             })}
@@ -144,7 +163,7 @@ const ProblemList = () => {
   const objectiveColumns = [
     {
       title: 'ID', dataIndex: 'problem_no', key: 'id', width: 80,
-      render: (no: number) => <Text code style={{ fontSize: 12 }}>{formatProblemId(no)}</Text>,
+      render: (no: string) => <Text code style={{ fontSize: 12 }}>{formatProblemId(no)}</Text>,
     },
     {
       title: '标题', dataIndex: 'title', key: 'title',
@@ -197,7 +216,39 @@ const ProblemList = () => {
     if (!acc[category.section]) acc[category.section] = []
     acc[category.section].push(category)
     return acc
-  }, {} as Record<string, ProblemCategory[]>)
+  }, {} as Record<string, { id: string; name: string }[]>)
+
+  const renderTagButton = (tagId: string, displayName: string, count: number, sectionColor: string, isActive: boolean) => (
+    <button
+      key={tagId}
+      onClick={() => handleCategoryClick(tagId)}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        padding: '3px 10px', borderRadius: 14, fontSize: 12,
+        lineHeight: '20px', cursor: 'pointer', transition: 'all 0.2s',
+        border: `1px solid ${isActive ? sectionColor : isDark ? '#404040' : '#e5e7eb'}`,
+        background: isActive
+          ? (isDark ? `${sectionColor}25` : `${sectionColor}12`)
+          : (isDark ? '#2a2a2a' : '#fff'),
+        color: isActive ? sectionColor : (isDark ? 'rgba(255,255,255,0.65)' : '#555'),
+        fontWeight: isActive ? 600 : 400,
+        boxShadow: isActive ? `0 0 0 1px ${sectionColor}30` : 'none',
+        outline: 'none',
+      }}
+    >
+      {displayName}
+      <span style={{
+        fontSize: 10, fontWeight: 500,
+        color: isActive ? sectionColor : (isDark ? 'rgba(255,255,255,0.25)' : '#aaa'),
+        background: isActive
+          ? (isDark ? `${sectionColor}20` : `${sectionColor}12`)
+          : (isDark ? '#333' : '#f3f4f6'),
+        padding: '0 5px', borderRadius: 8, lineHeight: '16px',
+      }}>
+        {count}
+      </span>
+    </button>
+  )
 
   const renderSection = (sectionKey: string) => {
     const config = sectionConfig[sectionKey]
@@ -209,49 +260,39 @@ const ProblemList = () => {
       <div style={{ marginBottom: 16 }}>
         <div style={{
           fontSize: 13, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
-          color: isDark ? config.color : config.color,
+          color: config.color,
         }}>
           <span style={{ fontSize: 14 }}>{config.emoji}</span>
           {config.label}
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {categories.map(category => {
-            const count = allProblems.filter(p => p.categories?.includes(category.id)).length
-            const isActive = selectedCategory === category.id
-            return (
-              <button
-                key={category.id}
-                onClick={() => handleCategoryClick(category.id)}
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                    padding: '3px 10px', borderRadius: 14, fontSize: 12,
-                    lineHeight: '20px', cursor: 'pointer', transition: 'all 0.2s',
-                    border: `1px solid ${isActive
-                      ? config.color
-                      : isDark ? '#404040' : '#e5e7eb'}`,
-                    background: isActive
-                      ? (isDark ? `${config.color}25` : config.activeBg)
-                      : (isDark ? '#2a2a2a' : '#fff'),
-                    color: isActive ? config.color : (isDark ? 'rgba(255,255,255,0.65)' : '#555'),
-                    fontWeight: isActive ? 600 : 400,
-                    boxShadow: isActive ? `0 0 0 1px ${config.color}30` : 'none',
-                    outline: 'none',
-                  }}
-                >
-                  {category.name}
-                  <span style={{
-                    fontSize: 10, fontWeight: 500,
-                    color: isActive ? config.color : (isDark ? 'rgba(255,255,255,0.25)' : '#aaa'),
-                    background: isActive
-                      ? (isDark ? `${config.color}20` : `${config.color}12`)
-                      : (isDark ? '#333' : '#f3f4f6'),
-                    padding: '0 5px', borderRadius: 8, lineHeight: '16px',
-                  }}>
-                    {count}
-                  </span>
-                </button>
-            )
+            const count = tagCounts[category.id] || 0
+            if (count === 0) return null
+            return renderTagButton(category.id, category.name, count, config.color, selectedCategory === category.id)
           })}
+        </div>
+      </div>
+    )
+  }
+
+  const renderDynamicTags = () => {
+    if (dynamicTags.length === 0) return null
+    const config = sectionConfig.dynamic
+
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div style={{
+          fontSize: 13, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6,
+          color: config.color,
+        }}>
+          <span style={{ fontSize: 14 }}>{config.emoji}</span>
+          {config.label}
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {dynamicTags.slice(0, 30).map(([tag, count]) =>
+            renderTagButton(tag, tag, count, config.color, selectedCategory === tag)
+          )}
         </div>
       </div>
     )
@@ -259,6 +300,13 @@ const ProblemList = () => {
 
   const cardBg = isDark ? '#1f1f1f' : '#fff'
   const cardBorder = isDark ? '#303030' : '#f0f0f0'
+
+  // Resolve display name for selected category
+  const selectedCategoryName = useMemo(() => {
+    if (!selectedCategory) return ''
+    const predefined = PROBLEM_CATEGORIES.find(c => c.id === selectedCategory)
+    return predefined?.name || selectedCategory
+  }, [selectedCategory])
 
   return (
     <div>
@@ -320,6 +368,7 @@ const ProblemList = () => {
         {renderSection('syntax')}
         {renderSection('algorithm')}
         {renderSection('algorithm_advanced')}
+        {renderDynamicTags()}
       </Card>
       )}
 
@@ -332,7 +381,7 @@ const ProblemList = () => {
         }}>
           <Text style={{ fontSize: 13 }}>当前筛选：</Text>
           <Tag color="blue" closable onClose={() => handleCategoryClick('')} style={{ margin: 0 }}>
-            {PROBLEM_CATEGORIES.find(c => c.id === selectedCategory)?.name}
+            {selectedCategoryName}
           </Tag>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {problems.filter(p => p.categories?.includes(selectedCategory)).length} 道题

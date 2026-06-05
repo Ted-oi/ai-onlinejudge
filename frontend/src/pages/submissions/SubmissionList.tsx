@@ -52,7 +52,7 @@ const SubmissionList = () => {
       width: 160,
       render: (title: string, record: any) => (
         <a onClick={() => navigate(`/problems/${record.problem_id}`)}>
-          {title || `P${String(record.problem_id).padStart(4, '0')}`}
+          {title || record.problem_no || `P${record.problem_id}`}
         </a>
       ),
     },

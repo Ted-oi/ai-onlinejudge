@@ -56,6 +56,7 @@ export interface Problem {
   memory_limit: number
   examples: any[]
   problem_type?: 'coding' | 'objective'
+  problem_no?: string
   objective_data?: ObjectiveData | null
   created_at: string
   updated_at: string

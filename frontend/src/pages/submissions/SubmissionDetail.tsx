@@ -128,7 +128,7 @@ const SubmissionDetail = () => {
 
         <Descriptions column={2} bordered>
           <Descriptions.Item label="提交ID">{submission.id}</Descriptions.Item>
-          <Descriptions.Item label="题目">{submission.problem_title || `P${String(submission.problem_id).padStart(4, '0')}`}</Descriptions.Item>
+          <Descriptions.Item label="题目">{submission.problem_title || submission.problem_no || `P${submission.problem_id}`}</Descriptions.Item>
           <Descriptions.Item label="用户ID">{submission.user_id}</Descriptions.Item>
           <Descriptions.Item label={submission.language === 'answer' ? '提交类型' : '编程语言'}>
             {getLanguageName(submission.language)}

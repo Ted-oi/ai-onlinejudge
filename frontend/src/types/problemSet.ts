@@ -32,7 +32,7 @@ export interface ProblemSetProblem {
   title: string
   difficulty: 'easy' | 'medium' | 'hard'
   category: string
-  problem_no?: number
+  problem_no?: string
 }
 
 export const PROBLEM_SET_CATEGORIES = [

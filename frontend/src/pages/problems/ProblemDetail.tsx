@@ -61,7 +61,7 @@ const ProblemDetail = () => {
           <Col xs={24} lg={18}>
             <Card>
               <div style={{ marginBottom: 16 }}>
-                <Title level={2}>P{String((problem as any).problem_no || problem.id).padStart(4, '0')} - {problem.title}</Title>
+                <Title level={2}>{(problem as any).problem_no || `P${problem.id}`} - {problem.title}</Title>
                 <Space>
                   <Tag color={{ easy: 'green', medium: 'blue', hard: 'red' }[problem.difficulty]}>
                     {{ easy: '简单', medium: '中等', hard: '困难' }[problem.difficulty]}
@@ -189,7 +189,7 @@ const ProblemDetail = () => {
         <Col xs={24} lg={18}>
           <Card loading={loading}>
             <div style={{ marginBottom: 16 }}>
-              <Title level={2}>P{(problem as any).problem_no ? String((problem as any).problem_no).padStart(4, '0') : problem.id} - {problem.title}</Title>
+              <Title level={2}>{(problem as any).problem_no || `P${problem.id}`} - {problem.title}</Title>
               <Space>
                 <Tag color={difficultyColors[problem.difficulty]}>
                   {difficultyLabels[problem.difficulty] || problem.difficulty}

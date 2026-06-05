@@ -72,7 +72,7 @@ export const importProblems = async (req: Request, res: Response, next: NextFunc
 
     const results = { success: 0, failed: 0, errors: [] as string[] }
 
-    const maxNoResult = await query('SELECT COALESCE(MAX(problem_no), 0) as max_no FROM problems')
+    const maxNoResult = await query("SELECT COALESCE(MAX(CAST(SUBSTRING(problem_no, 2) AS INTEGER)), 0) as max_no FROM problems WHERE problem_no ~ '^[PT]\\d+$'")
     let nextNo = maxNoResult.rows[0].max_no + 1
 
     for (const problem of problems) {
@@ -99,7 +99,7 @@ export const importProblems = async (req: Request, res: Response, next: NextFunc
             problem.time_limit || 1000,
             problem.memory_limit || 256,
             JSON.stringify(problem.examples || []),
-            problem.problem_no || nextNo++,
+            problem.problem_no || `P${String(nextNo++).padStart(5, '0')}`,
             problem.problem_type || 'coding',
             problem.objective_data ? JSON.stringify(problem.objective_data) : null,
           ]
@@ -194,7 +194,7 @@ export const importObjectiveExcel = async (req: Request, res: Response, next: Ne
 
     const results = { success: 0, failed: 0, errors: [] as string[] }
 
-    const maxNoResult = await query('SELECT COALESCE(MAX(problem_no), 0) as max_no FROM problems')
+    const maxNoResult = await query("SELECT COALESCE(MAX(CAST(SUBSTRING(problem_no, 2) AS INTEGER)), 0) as max_no FROM problems WHERE problem_no ~ '^[PT]\\d+$'")
     let nextNo = maxNoResult.rows[0].max_no + 1
 
     for (let i = 0; i < dataRows.length; i++) {
@@ -243,7 +243,7 @@ export const importObjectiveExcel = async (req: Request, res: Response, next: Ne
         await query(
           `INSERT INTO problems (title, description, difficulty, category, categories, time_limit, memory_limit, problem_type, objective_data, problem_no)
            VALUES ($1, $2, $3, $4, $5, 0, 0, 'objective', $6, $7)`,
-          [title, description || title, finalDifficulty, category, JSON.stringify([category]), JSON.stringify(objectiveData), nextNo++]
+          [title, description || title, finalDifficulty, category, JSON.stringify([category]), JSON.stringify(objectiveData), `T${String(nextNo++).padStart(5, '0')}`]
         )
 
         results.success++
