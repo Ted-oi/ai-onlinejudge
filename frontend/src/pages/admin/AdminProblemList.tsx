@@ -160,9 +160,10 @@ const AdminProblemList = () => {
   const columns = [
     {
       title: 'ID',
-      dataIndex: 'id',
-      width: 70,
-      sorter: (a: Problem, b: Problem) => a.id - b.id,
+      dataIndex: 'problem_no',
+      width: 90,
+      sorter: (a: Problem, b: Problem) => (a.problem_no || '').localeCompare(b.problem_no || ''),
+      render: (no: string) => no || '-',
     },
     {
       title: '标题',

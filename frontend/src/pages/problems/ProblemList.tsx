@@ -33,12 +33,15 @@ const ProblemList = () => {
   const [selectedCategory, setSelectedCategory] = useState('')
   const [allProblems, setAllProblems] = useState<Problem[]>([])
   const [activeTab, setActiveTab] = useState<string>('coding')
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
 
   const fetchProblems = useCallback(async (type?: string) => {
     try {
       setLoading(true)
       const pt = type || activeTab
-      const queryObj = pt === 'objective' ? { ...filters, limit: 200, problem_type: 'objective' as const } : { ...filters, limit: 200 }
+      const queryObj = pt === 'objective'
+        ? { ...filters, page: pagination.current, limit: pagination.pageSize, problem_type: 'objective' as const }
+        : { ...filters, page: pagination.current, limit: pagination.pageSize }
       const { problems: data, total } = await problemService.getProblems(queryObj)
       const processedData = data.map((problem: Problem) => ({
         ...problem,
@@ -46,17 +49,24 @@ const ProblemList = () => {
       }))
       setProblems(processedData)
       setTotalCount(total)
-      if (!filters.category && !filters.difficulty && !filters.search && pt !== 'objective') {
-        setAllProblems(processedData)
-      }
     } catch { message.error('获取题目列表失败') } finally { setLoading(false) }
-  }, [filters.category, filters.difficulty, filters.search, activeTab])
+  }, [filters.category, filters.difficulty, filters.search, activeTab, pagination.current, pagination.pageSize])
+
+  // 单独获取标签统计（仅需一次，不限数量）
+  const fetchAllForTags = useCallback(async () => {
+    try {
+      const { problems: data } = await problemService.getProblems({ limit: 2000 })
+      setAllProblems(data)
+    } catch { /* ignore */ }
+  }, [])
 
   useEffect(() => { fetchProblems() }, [fetchProblems])
+  useEffect(() => { fetchAllForTags() }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilters(prev => ({ ...prev, search: searchInput.trim() }))
+      setPagination(prev => ({ ...prev, current: 1 }))
     }, 400)
     return () => clearTimeout(timer)
   }, [searchInput])
@@ -69,6 +79,7 @@ const ProblemList = () => {
       setSelectedCategory(categoryId)
       setFilters({ ...filters, category: categoryId })
     }
+    setPagination(prev => ({ ...prev, current: 1 }))
   }
 
   const formatProblemId = (no: string | number) => no ? String(no) : ''
@@ -319,7 +330,7 @@ const ProblemList = () => {
         )}
       </div>
 
-      <Tabs activeKey={activeTab} onChange={(key) => { setActiveTab(key); setSelectedCategory(''); setFilters({ ...filters, category: '' }); fetchProblems(key); }} items={[
+      <Tabs activeKey={activeTab} onChange={(key) => { setActiveTab(key); setSelectedCategory(''); setFilters({ ...filters, category: '' }); setPagination(prev => ({ ...prev, current: 1 })); }} items={[
         { key: 'coding', label: '编程题' },
         { key: 'objective', label: '客观题' },
       ]} style={{ marginBottom: 12 }} />
@@ -336,7 +347,7 @@ const ProblemList = () => {
             style={{ width: 200 }}
             allowClear
           />
-          <Select value={filters.difficulty || ''} onChange={v => setFilters({ ...filters, difficulty: v })} style={{ width: 120 }}>
+          <Select value={filters.difficulty || ''} onChange={v => { setFilters({ ...filters, difficulty: v }); setPagination(prev => ({ ...prev, current: 1 })); }} style={{ width: 120 }}>
             <Option value="">全部难度</Option>
             <Option value="easy">简单</Option>
             <Option value="medium">中等</Option>
@@ -398,9 +409,13 @@ const ProblemList = () => {
           loading={loading}
           rowKey="id"
           pagination={{
+            current: pagination.current,
+            pageSize: pagination.pageSize,
+            total: totalCount,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 道题目`,
+            onChange: (page, pageSize) => setPagination({ current: page, pageSize }),
           }}
         />
       </Card>
