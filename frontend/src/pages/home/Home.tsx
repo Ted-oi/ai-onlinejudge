@@ -4,7 +4,6 @@ import {
   CodeOutlined,
   TrophyOutlined,
   BookOutlined,
-  RobotOutlined,
   ArrowRightOutlined,
   SettingOutlined,
   ThunderboltOutlined,
@@ -16,11 +15,16 @@ import {
   CloseCircleOutlined,
   RocketOutlined,
   CompassOutlined,
-  TeamOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
+} from 'recharts'
 import { adminService } from '../../services/admin.service'
 import { submissionService } from '../../services/submission.service'
+import statsService from '../../services/stats.service'
 import { useTheme } from '../../components/common/ThemeSwitcher'
 import useCountUp from '../../hooks/useCountUp'
 import dayjs from 'dayjs'
@@ -31,6 +35,17 @@ dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
 const { Title, Paragraph, Text } = Typography
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: '#52c41a',
+  medium: '#faad14',
+  hard: '#ff4d4f',
+}
+const DIFFICULTY_LABELS: Record<string, string> = {
+  easy: '简单',
+  medium: '中等',
+  hard: '困难',
+}
 
 const StatCard = ({ card, loading, isDark, delay }: any) => {
   const animated = useCountUp(card.value, loading)
@@ -67,6 +82,8 @@ const Home = () => {
   const navigate = useNavigate()
   const [stats, setStats] = useState<any>(null)
   const [recentSubmissions, setRecentSubmissions] = useState<any[]>([])
+  const [trendData, setTrendData] = useState<any[]>([])
+  const [diffData, setDiffData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const { theme } = useTheme()
   const isDark = theme === 'dark'
@@ -82,6 +99,10 @@ const Home = () => {
       ])
       setStats(statData)
       setRecentSubmissions(Array.isArray(subData) ? subData.slice(0, 5) : [])
+
+      // Load chart data in parallel (non-blocking)
+      statsService.getSubmissionTrend().then(d => setTrendData(d || [])).catch(() => {})
+      statsService.getDifficultyDistribution().then(d => setDiffData(d || [])).catch(() => {})
     } catch (error) { console.error(error) } finally {
       setLoading(false)
     }
@@ -98,6 +119,7 @@ const Home = () => {
     { title: '题目练习', desc: '丰富的题库涵盖多种难度，支持 C++、Python 实时评测', icon: <CodeOutlined />, color: '#4f46e5', action: '/problems', label: '开始练习' },
     { title: '在线比赛', desc: '与其他选手同台竞技，实时排名，挑战自我极限', icon: <TrophyOutlined />, color: '#10b981', action: '/contests', label: '查看比赛' },
     { title: 'AI 助手', desc: '智能分析代码、优化算法，提供个性化学习指导', icon: <BulbOutlined />, color: '#f59e0b', action: '/ai', label: '开始对话' },
+    { title: 'Playground', desc: '自由编码环境，无需关联题目，随时运行测试代码', icon: <ExperimentOutlined />, color: '#06b6d4', action: '/playground', label: '开始编码' },
     { title: '博客 / 题解', desc: '分享解题思路，学习他人经验，共同进步', icon: <ReadOutlined />, color: '#8b5cf6', action: '/articles', label: '浏览文章' },
     { title: '排行榜', desc: '查看全局排名，了解自己的实力水平', icon: <CrownOutlined />, color: '#ea580c', action: '/leaderboard', label: '查看排名' },
     ...(user.role === 'admin' || user.role === 'teacher'
@@ -113,6 +135,27 @@ const Home = () => {
     accepted: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
     wrong_answer: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
   }
+
+  const gridColor = isDark ? '#333' : '#f0f0f0'
+  const axisColor = isDark ? 'rgba(255,255,255,0.45)' : '#999'
+
+  // Fill trend gaps for continuous area chart
+  const filledTrend = (() => {
+    if (trendData.length === 0) return []
+    const map = new Map(trendData.map((d: any) => [d.date, d]))
+    const result = []
+    for (let i = 29; i >= 0; i--) {
+      const d = dayjs().subtract(i, 'day')
+      const key = d.format('YYYY-MM-DD')
+      const entry = map.get(key)
+      result.push({
+        date: d.format('M/D'),
+        total: entry ? parseInt(entry.total) : 0,
+        accepted: entry ? parseInt(entry.accepted) : 0,
+      })
+    }
+    return result
+  })()
 
   return (
     <div>
@@ -146,8 +189,8 @@ const Home = () => {
             <Button
               size="large"
               ghost
-              icon={<RobotOutlined />}
-              onClick={() => navigate('/ai')}
+              icon={<ExperimentOutlined />}
+              onClick={() => navigate('/playground')}
               style={{
                 borderColor: 'rgba(255,255,255,0.3)',
                 color: 'white',
@@ -156,7 +199,7 @@ const Home = () => {
                 paddingInline: 24,
               }}
             >
-              AI 助手
+              Playground
             </Button>
           </Space>
           {user.solved_count > 0 && (
@@ -195,8 +238,8 @@ const Home = () => {
           </div>
           <Space size={16} wrap>
             <Button type="primary" icon={<CodeOutlined />} onClick={() => navigate('/problems')}>试做第一道题</Button>
+            <Button icon={<ExperimentOutlined />} onClick={() => navigate('/playground')}>代码 Playground</Button>
             <Button icon={<CompassOutlined />} onClick={() => navigate('/learning-paths')}>探索学习路径</Button>
-            <Button icon={<TeamOutlined />} onClick={() => navigate('/teams')}>加入团队</Button>
           </Space>
         </Card>
       )}
@@ -209,6 +252,78 @@ const Home = () => {
           </Col>
         ))}
       </Row>
+
+      {/* Charts Row: Trend + Difficulty */}
+      {(filledTrend.length > 0 || diffData.length > 0) && (
+        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+          {filledTrend.length > 0 && (
+            <Col xs={24} md={16}>
+              <Card
+                title="提交趋势（近 30 天）"
+                style={{ borderRadius: 12, background: cardBg, borderColor: cardBorder }}
+                className="stagger-fade-in"
+              >
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={filledTrend} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                    <XAxis dataKey="date" tick={{ fill: axisColor, fontSize: 11 }} axisLine={{ stroke: gridColor }} />
+                    <YAxis tick={{ fill: axisColor, fontSize: 11 }} axisLine={{ stroke: gridColor }} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{
+                        background: isDark ? '#1f1f1f' : '#fff',
+                        border: `1px solid ${isDark ? '#444' : '#e8e8e8'}`,
+                        borderRadius: 8,
+                        color: isDark ? '#e0e0e0' : '#333',
+                      }}
+                    />
+                    <Area type="monotone" dataKey="total" stroke="#4f46e5" fill="#4f46e5" fillOpacity={0.15} name="总提交" strokeWidth={2} />
+                    <Area type="monotone" dataKey="accepted" stroke="#10b981" fill="#10b981" fillOpacity={0.15} name="已通过" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Card>
+            </Col>
+          )}
+          {diffData.length > 0 && (
+            <Col xs={24} md={8}>
+              <Card
+                title="已解题目难度分布"
+                style={{ borderRadius: 12, background: cardBg, borderColor: cardBorder }}
+                className="stagger-fade-in"
+              >
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={diffData.map((d: any) => ({
+                        name: DIFFICULTY_LABELS[d.difficulty] || d.difficulty,
+                        value: parseInt(d.solved),
+                        color: DIFFICULTY_COLORS[d.difficulty] || '#888',
+                      }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, value }) => `${name} ${value}`}
+                    >
+                      {diffData.map((d: any, i: number) => (
+                        <Cell key={i} fill={DIFFICULTY_COLORS[d.difficulty] || '#888'} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: isDark ? '#1f1f1f' : '#fff',
+                        border: `1px solid ${isDark ? '#444' : '#e8e8e8'}`,
+                        borderRadius: 8,
+                        color: isDark ? '#e0e0e0' : '#333',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Card>
+            </Col>
+          )}
+        </Row>
+      )}
 
       {/* Feature Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>

@@ -21,7 +21,7 @@ interface TestCaseResult {
 
 const COMPILE_TIMEOUT = 10000
 
-const LANG_CONFIG: Record<string, {
+export const LANG_CONFIG: Record<string, {
   srcFile: string
   compile: (src: string, workDir: string) => string | null
   run: (workDir: string, input: string, timeLimit: number) => Promise<{ stdout: string; stderr: string; runtime: number; exitCode: number; signal: string | null }>
@@ -108,7 +108,7 @@ const LANG_CONFIG: Record<string, {
   },
 }
 
-function runProcess(
+export function runProcess(
   command: string,
   args: string[],
   cwd: string,

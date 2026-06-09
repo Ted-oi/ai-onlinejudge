@@ -60,6 +60,7 @@ const TeamList = React.lazy(() => import('./pages/teams/TeamList'))
 const TeamDetail = React.lazy(() => import('./pages/teams/TeamDetail'))
 const CreateTeam = React.lazy(() => import('./pages/teams/CreateTeam'))
 const NotFoundPage = React.lazy(() => import('./components/common/NotFoundPage'))
+const Playground = React.lazy(() => import('./pages/playground/Playground'))
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token')
@@ -123,6 +124,7 @@ function ThemedApp() {
             <Route path="contests" element={<LazyPage><ContestList /></LazyPage>} />
             <Route path="contests/:id" element={<LazyPage><ContestDetail /></LazyPage>} />
             <Route path="ai" element={<LazyPage><AiChat /></LazyPage>} />
+            <Route path="playground" element={<LazyPage><Playground /></LazyPage>} />
             <Route path="users/:id" element={<LazyPage><UserProfile /></LazyPage>} />
             <Route path="users/:id/settings" element={<LazyPage><UserSettings /></LazyPage>} />
             <Route path="discussions/problem/:problemId" element={<LazyPage><DiscussionList /></LazyPage>} />

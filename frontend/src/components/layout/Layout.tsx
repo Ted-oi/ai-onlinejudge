@@ -18,6 +18,7 @@ import {
   ShareAltOutlined,
   CompassOutlined,
   TeamOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher, { useTheme } from '../common/ThemeSwitcher'
@@ -49,6 +50,7 @@ const Layout = () => {
     { key: '/learning-paths', icon: <CompassOutlined />, label: '学习路径' },
     { key: '/teams', icon: <TeamOutlined />, label: '团队/班级' },
     { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
+    { key: '/playground', icon: <ExperimentOutlined />, label: 'Playground' },
     { key: '/submissions', icon: <ThunderboltOutlined />, label: '提交记录' },
     ...(user.role === 'admin' || user.role === 'teacher'
       ? [{ type: 'divider' as const }, { key: '/admin', icon: <SettingOutlined />, label: '管理后台' }]

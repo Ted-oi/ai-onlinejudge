@@ -28,6 +28,7 @@ import codeShareRoutes from './routes/codeShare.routes'
 import learningPathRoutes from './routes/learningPath.routes'
 import teamRoutes from './routes/team.routes'
 import testgenRoutes from './routes/testgen.routes'
+import playgroundRoutes from './routes/playground.routes'
 import * as adminController from './controllers/admin.controller'
 import { createServer } from 'http'
 import { initSocketIO } from './config/socket'
@@ -132,6 +133,7 @@ app.use('/api/articles', articleRoutes)
 app.use('/api/code-shares', codeShareRoutes)
 app.use('/api/learning-paths', learningPathRoutes)
 app.use('/api/teams', teamRoutes)
+app.use('/api/playground', playgroundRoutes)
 
 // AI test case generation
 app.use('/api/problems/:id/generate-test-cases', testgenRoutes)
@@ -167,6 +169,61 @@ app.use('/api/admin', adminRoutes)
 
 // 公开统计接口
 app.get('/api/stats', adminController.getPublicStats)
+
+// User submission trend & difficulty stats (requires auth)
+app.get('/api/stats/submission-trend', authenticate, async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.userId
+    const result = await query(
+      `SELECT DATE(created_at) as date, COUNT(*) as total,
+              COUNT(*) FILTER (WHERE status = 'accepted') as accepted
+       FROM submissions
+       WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
+       GROUP BY DATE(created_at) ORDER BY date`,
+      [userId]
+    )
+    res.json({ success: true, data: result.rows.map((r: any) => ({ ...r, total: parseInt(r.total), accepted: parseInt(r.accepted) })) })
+  } catch (err) { next(err) }
+})
+
+app.get('/api/stats/difficulty-distribution', authenticate, async (req: any, res: any, next: any) => {
+  try {
+    const userId = req.userId
+    const result = await query(
+      `SELECT p.difficulty, COUNT(DISTINCT s.problem_id) as solved
+       FROM submissions s
+       JOIN problems p ON s.problem_id = p.id
+       WHERE s.user_id = $1 AND s.status = 'accepted'
+       GROUP BY p.difficulty`,
+      [userId]
+    )
+    res.json({ success: true, data: result.rows })
+  } catch (err) { next(err) }
+})
+
+app.get('/api/stats/admin-trend', authenticate, authorize('admin', 'teacher'), async (req: any, res: any, next: any) => {
+  try {
+    const [submissionTrend, userTrend] = await Promise.all([
+      query(
+        `SELECT DATE(created_at) as date, COUNT(*) as total
+         FROM submissions WHERE created_at >= NOW() - INTERVAL '7 days'
+         GROUP BY DATE(created_at) ORDER BY date`
+      ),
+      query(
+        `SELECT DATE(created_at) as date, COUNT(*) as total
+         FROM users WHERE created_at >= NOW() - INTERVAL '7 days'
+         GROUP BY DATE(created_at) ORDER BY date`
+      ),
+    ])
+    res.json({
+      success: true,
+      data: {
+        submissions: submissionTrend.rows.map((r: any) => ({ ...r, total: parseInt(r.total) })),
+        users: userTrend.rows.map((r: any) => ({ ...r, total: parseInt(r.total) })),
+      },
+    })
+  } catch (err) { next(err) }
+})
 
 // 创建上传目录
 const uploadsDir = path.join(process.cwd(), 'uploads', 'courses')
