@@ -46,7 +46,7 @@ def elem_to_markdown(elem):
     if tag == 'img':
         src = elem.attr('src') or ''
         alt = elem.attr('alt') or ''
-        if src and 'luogu.com.cn/upload/image' in src:
+        if src and ('luogu.com.cn/upload/image' in src or 'luogu.com.cn/upload/pic' in src):
             parts.append(f'\n![{alt}]({src})\n')
         return parts
 
@@ -57,7 +57,7 @@ def elem_to_markdown(elem):
         inner_html = ''
 
     # Check for child images in the HTML
-    has_imgs = '<img' in inner_html and 'luogu.com.cn/upload/image' in inner_html
+    has_imgs = '<img' in inner_html and 'luogu.com.cn/upload/' in inner_html
 
     if has_imgs:
         # Parse the HTML to build markdown with images
@@ -68,7 +68,7 @@ def elem_to_markdown(elem):
             if img_match:
                 src = img_match.group(1)
                 alt = img_match.group(2) or ''
-                if 'luogu.com.cn/upload/image' in src:
+                if 'luogu.com.cn/upload/' in src:
                     parts.append(f'\n![{alt}]({src})\n')
             else:
                 # Text segment - strip HTML tags and get plain text
@@ -217,6 +217,10 @@ def scrape_problem(page, pid):
         elif key in result:
             result[key] = content
 
+    # Mark if any section has images (even if text is empty)
+    if '![' in result.get('description', '') or '![' in result.get('background', ''):
+        result['has_images'] = True
+
     return result
 
 
@@ -335,7 +339,7 @@ def main():
                     print('SKIP (not found)')
                     progress[pid] = {'status': 'skip', 'reason': 'not_found'}
                     fail += 1
-                elif not problem.get('description'):
+                elif not problem.get('description') and not problem.get('has_images'):
                     print('SKIP (no description)')
                     progress[pid] = {'status': 'skip', 'reason': 'no_desc'}
                     fail += 1
