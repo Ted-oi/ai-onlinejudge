@@ -1,189 +1,143 @@
-import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { asyncHandler } from '../utils/asyncHandler'
+import { sendSuccess, sendSuccessWithMessage } from '../utils/apiResponse'
+import { notFound } from '../utils/apiError'
 
-export const getCourses = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { category, search, page = 1, limit = 20 } = req.query
+export const getCourses = asyncHandler(async (req, res) => {
+  const { category, search, page = 1, limit = 20 } = req.query
 
-    let queryText = 'SELECT * FROM courses WHERE 1=1'
-    const params: any[] = []
-    let paramCount = 1
+  let queryText = 'SELECT * FROM courses WHERE 1=1'
+  const params: any[] = []
+  let paramCount = 1
 
-    if (category) {
-      queryText += ` AND category = $${paramCount++}`
-      params.push(category)
-    }
-
-    if (search) {
-      queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
-      params.push(`%${search}%`, `%${search}%`)
-    }
-
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
-    queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
-    params.push(parseInt(limit as string), offset)
-
-    const result = await query(queryText, params)
-
-    res.json({
-      success: true,
-      data: { courses: result.rows }
-    })
-  } catch (error) {
-    next(error)
+  if (category) {
+    queryText += ` AND category = $${paramCount++}`
+    params.push(category)
   }
-}
 
-export const getCourseById = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const userId = req.userId
+  if (search) {
+    queryText += ` AND (title ILIKE $${paramCount++} OR description ILIKE $${paramCount++})`
+    params.push(`%${search}%`, `%${search}%`)
+  }
 
-    const result = await query('SELECT * FROM courses WHERE id = $1', [id])
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
+  queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+  params.push(parseInt(limit as string), offset)
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '课程不存在' }
-      })
-    }
+  const result = await query(queryText, params)
 
-    const course = result.rows[0]
+  return sendSuccess(res, { courses: result.rows })
+})
 
-    const materialsResult = await query(
-      'SELECT * FROM course_materials WHERE course_id = $1 ORDER BY order_index',
-      [id]
+export const getCourseById = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const userId = req.userId
+
+  const result = await query('SELECT * FROM courses WHERE id = $1', [id])
+
+  if (result.rows.length === 0) {
+    throw notFound('课程不存在')
+  }
+
+  const course = result.rows[0]
+
+  const materialsResult = await query(
+    'SELECT * FROM course_materials WHERE course_id = $1 ORDER BY order_index',
+    [id]
+  )
+
+  // Fetch associated problem set with progress
+  let problemSet: any = null
+  if (course.problem_set_id) {
+    const psResult = await query(
+      'SELECT id, title, description, category, difficulty, cover_color, problem_ids FROM problem_sets WHERE id = $1',
+      [course.problem_set_id]
     )
-
-    // Fetch associated problem set with progress
-    let problemSet: any = null
-    if (course.problem_set_id) {
-      const psResult = await query(
-        'SELECT id, title, description, category, difficulty, cover_color, problem_ids FROM problem_sets WHERE id = $1',
-        [course.problem_set_id]
-      )
-      if (psResult.rows.length > 0) {
-        const ps = psResult.rows[0]
-        const pids: number[] = ps.problem_ids || []
-        let solvedCount = 0
-        if (userId && pids.length > 0) {
-          const solvedResult = await query(
-            `SELECT COUNT(DISTINCT problem_id) as cnt FROM submissions
+    if (psResult.rows.length > 0) {
+      const ps = psResult.rows[0]
+      const pids: number[] = ps.problem_ids || []
+      let solvedCount = 0
+      if (userId && pids.length > 0) {
+        const solvedResult = await query(
+          `SELECT COUNT(DISTINCT problem_id) as cnt FROM submissions
              WHERE user_id = $1 AND status = 'accepted' AND problem_id = ANY($2::int[])`,
-            [userId, pids]
-          )
-          solvedCount = parseInt(solvedResult.rows[0].cnt)
-        }
-        problemSet = {
-          ...ps,
-          total_count: pids.length,
-          solved_count: solvedCount,
-          percentage: pids.length > 0 ? Math.round((solvedCount / pids.length) * 100) : 0,
-        }
+          [userId, pids]
+        )
+        solvedCount = parseInt(solvedResult.rows[0].cnt)
+      }
+      problemSet = {
+        ...ps,
+        total_count: pids.length,
+        solved_count: solvedCount,
+        percentage: pids.length > 0 ? Math.round((solvedCount / pids.length) * 100) : 0,
       }
     }
-
-    res.json({
-      success: true,
-      data: {
-        course,
-        materials: materialsResult.rows,
-        problemSet,
-      }
-    })
-  } catch (error) {
-    next(error)
   }
-}
 
-export const createCourse = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { title, description, category, instructor_id } = req.body
+  return sendSuccess(res, {
+    course,
+    materials: materialsResult.rows,
+    problemSet,
+  })
+})
 
-    const result = await query(
-      `INSERT INTO courses (title, description, category, instructor_id)
+export const createCourse = asyncHandler(async (req, res) => {
+  const { title, description, category, instructor_id } = req.body
+
+  const result = await query(
+    `INSERT INTO courses (title, description, category, instructor_id)
        VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [title, description, category, instructor_id]
-    )
+    [title, description, category, instructor_id]
+  )
 
-    res.status(201).json({
-      success: true,
-      data: { course: result.rows[0] }
-    })
-  } catch (error) {
-    next(error)
-  }
-}
+  return sendSuccess(res, { course: result.rows[0] }, 201)
+})
 
-export const updateCourse = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const { title, description, category } = req.body
+export const updateCourse = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { title, description, category } = req.body
 
-    const result = await query(
-      `UPDATE courses
+  const result = await query(
+    `UPDATE courses
        SET title = $1, description = $2, category = $3, updated_at = NOW()
        WHERE id = $4
        RETURNING *`,
-      [title, description, category, id]
-    )
+    [title, description, category, id]
+  )
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '课程不存在' }
-      })
-    }
-
-    res.json({
-      success: true,
-      data: { course: result.rows[0] }
-    })
-  } catch (error) {
-    next(error)
+  if (result.rows.length === 0) {
+    throw notFound('课程不存在')
   }
-}
 
-export const deleteCourse = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
+  return sendSuccess(res, { course: result.rows[0] })
+})
 
-    const result = await query('DELETE FROM courses WHERE id = $1 RETURNING *', [id])
+export const deleteCourse = asyncHandler(async (req, res) => {
+  const { id } = req.params
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '课程不存在' }
-      })
-    }
+  const result = await query('DELETE FROM courses WHERE id = $1 RETURNING *', [id])
 
-    res.json({
-      success: true,
-      message: '删除成功'
-    })
-  } catch (error) {
-    next(error)
+  if (result.rows.length === 0) {
+    throw notFound('课程不存在')
   }
-}
 
-export const updateCourseProblemSet = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const { problem_set_id } = req.body
+  return sendSuccessWithMessage(res, '删除成功')
+})
 
-    const result = await query(
-      `UPDATE courses SET problem_set_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-      [problem_set_id || null, id]
-    )
+export const updateCourseProblemSet = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { problem_set_id } = req.body
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { message: '课程不存在' } })
-    }
+  const result = await query(
+    `UPDATE courses SET problem_set_id = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
+    [problem_set_id || null, id]
+  )
 
-    res.json({ success: true, data: { course: result.rows[0] } })
-  } catch (error) {
-    next(error)
+  if (result.rows.length === 0) {
+    throw notFound('课程不存在')
   }
-}
+
+  return sendSuccess(res, { course: result.rows[0] })
+})

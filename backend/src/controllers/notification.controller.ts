@@ -1,94 +1,73 @@
-import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
 import { emitToUser } from '../services/ws.service'
+import { asyncHandler } from '../utils/asyncHandler'
+import { sendSuccess } from '../utils/apiResponse'
 
-export const getNotifications = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId
-    const { unread, page = 1, limit = 20 } = req.query
+export const getNotifications = asyncHandler(async (req, res) => {
+  const userId = req.userId
+  const { unread, page = 1, limit = 20 } = req.query
 
-    let queryText = 'SELECT * FROM notifications WHERE user_id = $1'
-    const params: any[] = [userId]
-    let paramCount = 2
+  let queryText = 'SELECT * FROM notifications WHERE user_id = $1'
+  const params: any[] = [userId]
+  let paramCount = 2
 
-    if (unread === 'true') {
-      queryText += ` AND is_read = false`
-    }
-
-    const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
-    queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
-    params.push(parseInt(limit as string), offset)
-
-    const result = await query(queryText, params)
-
-    const countResult = await query(
-      'SELECT COUNT(*) as total FROM notifications WHERE user_id = $1',
-      [userId]
-    )
-
-    res.json({
-      success: true,
-      data: {
-        notifications: result.rows,
-        total: parseInt(countResult.rows[0].total),
-        page: parseInt(page as string),
-        limit: parseInt(limit as string)
-      }
-    })
-  } catch (error) {
-    next(error)
+  if (unread === 'true') {
+    queryText += ` AND is_read = false`
   }
-}
 
-export const getUnreadCount = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId
+  const offset = (parseInt(page as string) - 1) * parseInt(limit as string)
+  queryText += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`
+  params.push(parseInt(limit as string), offset)
 
-    const result = await query(
-      'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
-      [userId]
-    )
+  const result = await query(queryText, params)
 
-    res.json({
-      success: true,
-      data: { count: parseInt(result.rows[0].count) }
-    })
-  } catch (error) {
-    next(error)
-  }
-}
+  const countResult = await query(
+    'SELECT COUNT(*) as total FROM notifications WHERE user_id = $1',
+    [userId]
+  )
 
-export const markAsRead = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId
-    const { id } = req.params
+  return sendSuccess(res, {
+    notifications: result.rows,
+    total: parseInt(countResult.rows[0].total),
+    page: parseInt(page as string),
+    limit: parseInt(limit as string),
+  })
+})
 
-    await query(
-      'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2',
-      [id, userId]
-    )
+export const getUnreadCount = asyncHandler(async (req, res) => {
+  const userId = req.userId
 
-    res.json({ success: true, data: { message: '已标记为已读' } })
-  } catch (error) {
-    next(error)
-  }
-}
+  const result = await query(
+    'SELECT COUNT(*) as count FROM notifications WHERE user_id = $1 AND is_read = false',
+    [userId]
+  )
 
-export const markAllAsRead = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId
+  return sendSuccess(res, { count: parseInt(result.rows[0].count) })
+})
 
-    await query(
-      'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',
-      [userId]
-    )
+export const markAsRead = asyncHandler(async (req, res) => {
+  const userId = req.userId
+  const { id } = req.params
 
-    res.json({ success: true, data: { message: '已全部标记为已读' } })
-  } catch (error) {
-    next(error)
-  }
-}
+  await query(
+    'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2',
+    [id, userId]
+  )
+
+  return sendSuccess(res, { message: '已标记为已读' })
+})
+
+export const markAllAsRead = asyncHandler(async (req, res) => {
+  const userId = req.userId
+
+  await query(
+    'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',
+    [userId]
+  )
+
+  return sendSuccess(res, { message: '已全部标记为已读' })
+})
 
 export async function createNotification(
   userId: number,

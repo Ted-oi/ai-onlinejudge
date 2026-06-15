@@ -31,7 +31,7 @@ const ProblemList = () => {
   const [filters, setFilters] = useState({ difficulty: '', category: '', search: '' })
   const [searchInput, setSearchInput] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [allProblems, setAllProblems] = useState<Problem[]>([])
+  const [tagCounts, setTagCounts] = useState<Record<string, number>>({})
   const [activeTab, setActiveTab] = useState<string>('coding')
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20 })
 
@@ -52,16 +52,18 @@ const ProblemList = () => {
     } catch { message.error('获取题目列表失败') } finally { setLoading(false) }
   }, [filters.category, filters.difficulty, filters.search, activeTab, pagination.current, pagination.pageSize])
 
-  // 单独获取标签统计（仅需一次，不限数量）
-  const fetchAllForTags = useCallback(async () => {
+  // 标签统计走专用端点（后端缓存），避免拉取全部题目
+  const fetchTagCounts = useCallback(async () => {
     try {
-      const { problems: data } = await problemService.getProblems({ limit: 2000 })
-      setAllProblems(data)
+      const tags = await problemService.getTags()
+      const counts: Record<string, number> = {}
+      tags.forEach(t => { counts[t.tag] = t.count })
+      setTagCounts(counts)
     } catch { /* ignore */ }
   }, [])
 
   useEffect(() => { fetchProblems() }, [fetchProblems])
-  useEffect(() => { fetchAllForTags() }, [])
+  useEffect(() => { fetchTagCounts() }, [])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,19 +85,6 @@ const ProblemList = () => {
   }
 
   const formatProblemId = (no: string | number) => no ? String(no) : ''
-
-  // Build tag frequency map from all problems
-  const tagCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-    allProblems.forEach(p => {
-      if (p.categories && Array.isArray(p.categories)) {
-        p.categories.forEach(tag => {
-          counts[tag] = (counts[tag] || 0) + 1
-        })
-      }
-    })
-    return counts
-  }, [allProblems])
 
   // Find tags not in predefined categories
   const dynamicTags = useMemo(() => {

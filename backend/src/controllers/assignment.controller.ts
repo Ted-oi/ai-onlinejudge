@@ -1,91 +1,77 @@
-import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
+import { asyncHandler } from '../utils/asyncHandler'
+import { sendSuccess } from '../utils/apiResponse'
+import { notFound } from '../utils/apiError'
 
-export const getAssignments = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { courseId } = req.params
+export const getAssignments = asyncHandler(async (req, res) => {
+  const { courseId } = req.params
 
-    const result = await query(
-      `SELECT a.*, u.username as creator_name
+  const result = await query(
+    `SELECT a.*, u.username as creator_name
        FROM assignments a
        JOIN users u ON a.creator_id = u.id
        WHERE a.course_id = $1
        ORDER BY a.end_time DESC`,
-      [courseId]
-    )
+    [courseId]
+  )
 
-    res.json({ success: true, data: { assignments: result.rows } })
-  } catch (error) {
-    next(error)
-  }
-}
+  return sendSuccess(res, { assignments: result.rows })
+})
 
-export const createAssignment = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { courseId } = req.params
-    const userId = req.userId
-    const { title, description, problem_ids, lesson_id, start_time, end_time } = req.body
+export const createAssignment = asyncHandler(async (req, res) => {
+  const { courseId } = req.params
+  const userId = req.userId
+  const { title, description, problem_ids, lesson_id, start_time, end_time } = req.body
 
-    const result = await query(
-      `INSERT INTO assignments (course_id, lesson_id, title, description, problem_ids, start_time, end_time, creator_id)
+  const result = await query(
+    `INSERT INTO assignments (course_id, lesson_id, title, description, problem_ids, start_time, end_time, creator_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [courseId, lesson_id || null, title, description || null, JSON.stringify(problem_ids || []),
-       start_time, end_time, userId]
-    )
+    [courseId, lesson_id || null, title, description || null, JSON.stringify(problem_ids || []),
+     start_time, end_time, userId]
+  )
 
-    res.status(201).json({ success: true, data: { assignment: result.rows[0] } })
-  } catch (error) {
-    next(error)
-  }
-}
+  return sendSuccess(res, { assignment: result.rows[0] }, 201)
+})
 
-export const getAssignment = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const userId = req.userId
+export const getAssignment = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const userId = req.userId
 
-    const result = await query(
-      `SELECT a.*, u.username as creator_name FROM assignments a
+  const result = await query(
+    `SELECT a.*, u.username as creator_name FROM assignments a
        JOIN users u ON a.creator_id = u.id WHERE a.id = $1`,
-      [id]
-    )
+    [id]
+  )
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { message: '作业不存在' } })
-    }
+  if (result.rows.length === 0) {
+    throw notFound('作业不存在')
+  }
 
-    const assignment = result.rows[0]
+  const assignment = result.rows[0]
 
-    const problems = await query(
-      `SELECT p.id, p.title, p.difficulty, p.category FROM problems p
+  const problems = await query(
+    `SELECT p.id, p.title, p.difficulty, p.category FROM problems p
        WHERE p.id = ANY($1::int[])`,
-      [assignment.problem_ids || []]
-    )
+    [assignment.problem_ids || []]
+  )
 
-    const mySubmissions = await query(
-      `SELECT asm.problem_id, s.status, s.created_at
+  const mySubmissions = await query(
+    `SELECT asm.problem_id, s.status, s.created_at
        FROM assignment_submissions asm
        JOIN submissions s ON asm.submission_id = s.id
        WHERE asm.assignment_id = $1 AND asm.user_id = $2`,
-      [id, userId]
-    )
+    [id, userId]
+  )
 
-    res.json({
-      success: true,
-      data: { assignment, problems: problems.rows, mySubmissions: mySubmissions.rows }
-    })
-  } catch (error) {
-    next(error)
-  }
-}
+  return sendSuccess(res, { assignment, problems: problems.rows, mySubmissions: mySubmissions.rows })
+})
 
-export const updateAssignment = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const { title, description, problem_ids, start_time, end_time } = req.body
+export const updateAssignment = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { title, description, problem_ids, start_time, end_time } = req.body
 
-    const result = await query(
-      `UPDATE assignments SET
+  const result = await query(
+    `UPDATE assignments SET
        title = COALESCE($1, title),
        description = COALESCE($2, description),
        problem_ids = COALESCE($3, problem_ids),
@@ -93,47 +79,39 @@ export const updateAssignment = async (req: Request, res: Response, next: NextFu
        end_time = COALESCE($5, end_time),
        updated_at = NOW()
        WHERE id = $6 RETURNING *`,
-      [title || null, description || null, problem_ids ? JSON.stringify(problem_ids) : null,
-       start_time || null, end_time || null, id]
-    )
+    [title || null, description || null, problem_ids ? JSON.stringify(problem_ids) : null,
+     start_time || null, end_time || null, id]
+  )
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { message: '作业不存在' } })
-    }
-
-    res.json({ success: true, data: { assignment: result.rows[0] } })
-  } catch (error) {
-    next(error)
+  if (result.rows.length === 0) {
+    throw notFound('作业不存在')
   }
-}
 
-export const deleteAssignment = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
+  return sendSuccess(res, { assignment: result.rows[0] })
+})
 
-    const result = await query('DELETE FROM assignments WHERE id = $1 RETURNING id', [id])
+export const deleteAssignment = asyncHandler(async (req, res) => {
+  const { id } = req.params
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { message: '作业不存在' } })
-    }
+  const result = await query('DELETE FROM assignments WHERE id = $1 RETURNING id', [id])
 
-    res.json({ success: true, data: { message: '已删除' } })
-  } catch (error) {
-    next(error)
+  if (result.rows.length === 0) {
+    throw notFound('作业不存在')
   }
-}
 
-export const getAssignmentProgress = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
+  return sendSuccess(res, { message: '已删除' })
+})
 
-    const assignment = await query('SELECT * FROM assignments WHERE id = $1', [id])
-    if (assignment.rows.length === 0) {
-      return res.status(404).json({ success: false, error: { message: '作业不存在' } })
-    }
+export const getAssignmentProgress = asyncHandler(async (req, res) => {
+  const { id } = req.params
 
-    const progress = await query(
-      `SELECT u.id as user_id, u.username, u.avatar,
+  const assignment = await query('SELECT * FROM assignments WHERE id = $1', [id])
+  if (assignment.rows.length === 0) {
+    throw notFound('作业不存在')
+  }
+
+  const progress = await query(
+    `SELECT u.id as user_id, u.username, u.avatar,
         COUNT(DISTINCT asm.problem_id) as solved_count,
         array_agg(DISTINCT asm.problem_id) as solved_problems
        FROM users u
@@ -142,17 +120,11 @@ export const getAssignmentProgress = async (req: Request, res: Response, next: N
        WHERE u.role = 'student'
        GROUP BY u.id, u.username, u.avatar
        ORDER BY solved_count DESC`,
-      [id]
-    )
+    [id]
+  )
 
-    res.json({
-      success: true,
-      data: {
-        total_problems: (assignment.rows[0].problem_ids || []).length,
-        progress: progress.rows
-      }
-    })
-  } catch (error) {
-    next(error)
-  }
-}
+  return sendSuccess(res, {
+    total_problems: (assignment.rows[0].problem_ids || []).length,
+    progress: progress.rows
+  })
+})

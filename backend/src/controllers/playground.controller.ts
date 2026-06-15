@@ -1,24 +1,26 @@
-import { Request, Response, NextFunction } from 'express'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
 import { LANG_CONFIG, runProcess } from '../services/localJudge'
 import { logger } from '../utils/logger'
+import { asyncHandler } from '../utils/asyncHandler'
+import { sendSuccess } from '../utils/apiResponse'
+import { badRequest } from '../utils/apiError'
 
 const COMPILE_TIMEOUT = 10000
 
-export const executeCode = async (req: Request, res: Response, next: NextFunction) => {
+export const executeCode = asyncHandler(async (req, res) => {
   try {
     const { code, language = 'cpp', input = '', timeLimit = 5000 } = req.body
 
     if (!code || typeof code !== 'string') {
-      return res.status(400).json({ success: false, error: { message: '请提供代码' } })
+      throw badRequest('请提供代码')
     }
 
     const lang = language.toLowerCase()
     const config = LANG_CONFIG[lang]
     if (!config) {
-      return res.status(400).json({ success: false, error: { message: `不支持的语言: ${language}` } })
+      throw badRequest(`不支持的语言: ${language}`)
     }
 
     const clampedTimeLimit = Math.min(Math.max(Number(timeLimit) || 5000, 1000), 10000)
@@ -28,15 +30,12 @@ export const executeCode = async (req: Request, res: Response, next: NextFunctio
       // Compile
       const compileError = config.compile(code, workDir)
       if (compileError) {
-        return res.json({
-          success: true,
-          data: {
-            status: 'compilation_error',
-            stdout: '',
-            stderr: compileError,
-            exitCode: 1,
-            runtime: 0,
-          },
+        return sendSuccess(res, {
+          status: 'compilation_error',
+          stdout: '',
+          stderr: compileError,
+          exitCode: 1,
+          runtime: 0,
         })
       }
 
@@ -56,22 +55,19 @@ export const executeCode = async (req: Request, res: Response, next: NextFunctio
 
       const timedOut = result.signal === 'SIGKILL' || result.runtime > clampedTimeLimit
 
-      res.json({
-        success: true,
-        data: {
-          status: timedOut ? 'time_limit_exceeded' : result.exitCode !== 0 ? 'runtime_error' : 'success',
-          stdout: result.stdout,
-          stderr: result.stderr,
-          exitCode: result.exitCode,
-          runtime: result.runtime,
-          signal: result.signal,
-        },
+      return sendSuccess(res, {
+        status: timedOut ? 'time_limit_exceeded' : result.exitCode !== 0 ? 'runtime_error' : 'success',
+        stdout: result.stdout,
+        stderr: result.stderr,
+        exitCode: result.exitCode,
+        runtime: result.runtime,
+        signal: result.signal,
       })
     } finally {
       try { fs.rmSync(workDir, { recursive: true, force: true }) } catch { /* best-effort */ }
     }
   } catch (err: any) {
     logger.error('Playground execute error', err)
-    next(err)
+    throw err
   }
-}
+})

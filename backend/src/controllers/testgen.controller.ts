@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { streamGenerateCases, parseGeneratedCases } from '../services/testgen.service'
 import { logger } from '../utils/logger'
+import { ApiError } from '../utils/apiError'
 
 // Simple in-memory rate limiter: max 5 requests per user per minute
 const rateLimitMap = new Map<number, { count: number; resetAt: number }>()
@@ -28,10 +29,7 @@ export const generateTestCases = async (req: Request, res: Response, next: NextF
     const problemId = parseInt(req.params.id)
 
     if (!checkRateLimit(userId)) {
-      return res.status(429).json({
-        success: false,
-        error: { message: '请求过于频繁，每分钟最多 5 次生成请求' },
-      })
+      throw new ApiError(429, '请求过于频繁，每分钟最多 5 次生成请求')
     }
 
     res.setHeader('Content-Type', 'text/event-stream')
@@ -53,10 +51,8 @@ export const generateTestCases = async (req: Request, res: Response, next: NextF
     logger.error('Generate test cases error', error)
     // If headers already sent, we can't change status code
     if (!res.headersSent) {
-      res.status(500).json({
-        success: false,
-        error: { message: error.message || 'AI 生成失败' },
-      })
+      // Forward to global errorHandler which renders { success: false, error: { message } }
+      next(error)
     } else {
       res.write(`data: ${JSON.stringify({ error: error.message || 'AI 生成失败' })}\n\n`)
       res.end()

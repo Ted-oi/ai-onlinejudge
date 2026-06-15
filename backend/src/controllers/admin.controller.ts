@@ -1,8 +1,10 @@
-import { Request, Response, NextFunction } from 'express'
 import { query } from '../config/database'
 import { logger } from '../utils/logger'
+import { asyncHandler } from '../utils/asyncHandler'
+import { sendSuccess } from '../utils/apiResponse'
+import { badRequest, notFound } from '../utils/apiError'
 
-export const getDashboardStats = async (req: Request, res: Response, next: NextFunction) => {
+export const getDashboardStats = asyncHandler(async (req, res) => {
   try {
     const [users, problems, submissions, courses, contests, statusBreakdown, recentSubmissions, pendingArticles] = await Promise.all([
       query('SELECT COUNT(*) as count FROM users'),
@@ -22,29 +24,26 @@ export const getDashboardStats = async (req: Request, res: Response, next: NextF
       query("SELECT COUNT(*) as count FROM articles WHERE status = 'pending'"),
     ])
 
-    res.json({
-      success: true,
-      data: {
-        totalUsers: parseInt(users.rows[0].count),
-        totalProblems: parseInt(problems.rows[0].count),
-        totalSubmissions: parseInt(submissions.rows[0].count),
-        totalCourses: parseInt(courses.rows[0].count),
-        totalContests: parseInt(contests.rows[0].count),
-        pendingArticles: parseInt(pendingArticles.rows[0].count),
-        statusBreakdown: statusBreakdown.rows.map((r: any) => ({
-          status: r.status,
-          count: parseInt(r.count),
-        })),
-        recentSubmissions: recentSubmissions.rows,
-      },
+    return sendSuccess(res, {
+      totalUsers: parseInt(users.rows[0].count),
+      totalProblems: parseInt(problems.rows[0].count),
+      totalSubmissions: parseInt(submissions.rows[0].count),
+      totalCourses: parseInt(courses.rows[0].count),
+      totalContests: parseInt(contests.rows[0].count),
+      pendingArticles: parseInt(pendingArticles.rows[0].count),
+      statusBreakdown: statusBreakdown.rows.map((r: any) => ({
+        status: r.status,
+        count: parseInt(r.count),
+      })),
+      recentSubmissions: recentSubmissions.rows,
     })
   } catch (error) {
     logger.error('Get dashboard stats error', error)
-    next(error)
+    throw error
   }
-}
+})
 
-export const getPublicStats = async (req: Request, res: Response, next: NextFunction) => {
+export const getPublicStats = asyncHandler(async (req, res) => {
   try {
     const [users, problems, submissions, courses, contests] = await Promise.all([
       query('SELECT COUNT(*) as count FROM users'),
@@ -54,49 +53,35 @@ export const getPublicStats = async (req: Request, res: Response, next: NextFunc
       query('SELECT COUNT(*) as count FROM contests'),
     ])
 
-    res.json({
-      success: true,
-      data: {
-        totalUsers: parseInt(users.rows[0].count),
-        totalProblems: parseInt(problems.rows[0].count),
-        totalSubmissions: parseInt(submissions.rows[0].count),
-        totalCourses: parseInt(courses.rows[0].count),
-        totalContests: parseInt(contests.rows[0].count),
-      },
+    return sendSuccess(res, {
+      totalUsers: parseInt(users.rows[0].count),
+      totalProblems: parseInt(problems.rows[0].count),
+      totalSubmissions: parseInt(submissions.rows[0].count),
+      totalCourses: parseInt(courses.rows[0].count),
+      totalContests: parseInt(contests.rows[0].count),
     })
   } catch (error) {
     logger.error('Get public stats error', error)
-    next(error)
+    throw error
   }
-}
+})
 
-export const updateUserRole = async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { id } = req.params
-    const { role } = req.body
+export const updateUserRole = asyncHandler(async (req, res) => {
+  const { id } = req.params
+  const { role } = req.body
 
-    if (!['student', 'teacher', 'admin'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: { message: '无效的角色类型' },
-      })
-    }
-
-    const result = await query(
-      'UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, username, email, role',
-      [role, id]
-    )
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: { message: '用户不存在' },
-      })
-    }
-
-    res.json({ success: true, data: result.rows[0] })
-  } catch (error) {
-    logger.error('Update user role error', error)
-    next(error)
+  if (!['student', 'teacher', 'admin'].includes(role)) {
+    throw badRequest('无效的角色类型')
   }
-}
+
+  const result = await query(
+    'UPDATE users SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING id, username, email, role',
+    [role, id]
+  )
+
+  if (result.rows.length === 0) {
+    throw notFound('用户不存在')
+  }
+
+  return sendSuccess(res, result.rows[0])
+})

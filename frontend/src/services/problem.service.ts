@@ -46,7 +46,7 @@ export const problemService = {
     return response.data.data
   },
 
-  getTags: async (): Promise<string[]> => {
+  getTags: async (): Promise<{ tag: string; count: number }[]> => {
     const response = await api.get('/problems/meta/tags')
     return response.data.data.tags
   },

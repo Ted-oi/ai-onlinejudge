@@ -4,7 +4,6 @@ import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
 import rateLimit from 'express-rate-limit'
-import fs from 'fs'
 import path from 'path'
 import { logger } from './utils/logger'
 import { errorHandler } from './middleware/errorHandler'
@@ -29,42 +28,20 @@ import learningPathRoutes from './routes/learningPath.routes'
 import teamRoutes from './routes/team.routes'
 import testgenRoutes from './routes/testgen.routes'
 import playgroundRoutes from './routes/playground.routes'
+import statsRoutes from './routes/stats.routes'
 import * as adminController from './controllers/admin.controller'
+import * as userController from './controllers/user.controller'
+import * as testcaseController from './controllers/testcase.controller'
+import * as plagiarismController from './controllers/plagiarism.controller'
+import * as importExportController from './controllers/problemImportExport.controller'
 import { createServer } from 'http'
 import { initSocketIO } from './config/socket'
 import { connectRedis } from './config/redis'
-import { query } from './config/database'
-import * as plagiarismController from './controllers/plagiarism.controller'
-import * as importExportController from './controllers/problemImportExport.controller'
-import multer from 'multer'
 import { authenticate, authorize } from './middleware/auth.middleware'
+import { avatarUpload, testcaseUpload, excelUpload } from './config/uploads'
 
 const app = express()
 const PORT = process.env.PORT || 5000
-
-// 配置文件上传
-const upload = multer({
-  dest: 'uploads/',
-  limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB
-  },
-  fileFilter: (req, file, cb) => {
-    // 允许上传的文件类型
-    const allowedTypes = [
-      'application/vnd.openxmlformats-officedocument.presentationml.presentation', // pptx
-      'application/vnd.ms-powerpoint', // ppt
-      'video/mp4', // mp4
-      'video/webm', // webm
-      'video/ogg', // ogg
-      'application/pdf', // pdf
-      'image/jpeg', // jpg, jpeg
-      'image/png', // png
-      'application/msword', // doc
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
-    ]
-    allowedTypes.includes(file.mimetype) ? cb(null, true) : cb(new Error('不支持的文件类型'))
-  }
-})
 
 app.use(helmet())
 app.use(cors({
@@ -88,25 +65,8 @@ app.use('/api/materials/files', express.static(path.join(process.cwd(), 'uploads
 // 静态文件服务：头像
 app.use('/api/avatars', express.static(path.join(process.cwd(), 'uploads', 'avatars')))
 
-// 头像上传配置
-const avatarUpload = multer({
-  dest: 'uploads/avatars',
-  limits: { fileSize: 2 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-    allowed.includes(file.mimetype) ? cb(null, true) : cb(new Error('仅支持 JPG/PNG/GIF/WebP'))
-  },
-})
-
-// 创建头像目录
-const avatarDir = path.join(process.cwd(), 'uploads', 'avatars')
-if (!fs.existsSync(avatarDir)) {
-  fs.mkdirSync(avatarDir, { recursive: true })
-}
-
-app.post('/api/users/:id/avatar', authenticate, avatarUpload.single('avatar'),
-  (req, res, next) => import('./controllers/user.controller').then(uc => uc.uploadAvatar(req, res, next))
-)
+// 头像上传（不经过 logger 中间件，所以放在前面）
+app.post('/api/users/:id/avatar', authenticate, avatarUpload.single('avatar'), userController.uploadAvatar)
 
 app.use((req, res, next) => {
   logger.info(`${req.method} ${req.path}`)
@@ -135,6 +95,7 @@ app.use('/api/code-shares', codeShareRoutes)
 app.use('/api/learning-paths', learningPathRoutes)
 app.use('/api/teams', teamRoutes)
 app.use('/api/playground', playgroundRoutes)
+app.use('/api/stats', statsRoutes)
 
 // AI test case generation
 app.use('/api/problems/:id/generate-test-cases', testgenRoutes)
@@ -148,111 +109,14 @@ app.post('/api/problems-import', authenticate, authorize('admin', 'teacher'), im
 
 // Objective question Excel import
 app.get('/api/objective-template', authenticate, authorize('admin', 'teacher'), importExportController.downloadObjectiveTemplate)
-app.post('/api/objective-import', authenticate, authorize('admin', 'teacher'), importExportController.excelUpload.single('file'), importExportController.importObjectiveExcel)
+app.post('/api/objective-import', authenticate, authorize('admin', 'teacher'), excelUpload.single('file'), importExportController.importObjectiveExcel)
 
 // 测试用例文件上传（.in/.out/.zip）
-const testcaseUpload = multer({
-  dest: 'uploads/temp',
-  limits: { fileSize: 50 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    const ext = file.originalname.toLowerCase()
-    if (ext.endsWith('.in') || ext.endsWith('.out') || ext.endsWith('.ans') || ext.endsWith('.zip')) {
-      cb(null, true)
-    } else {
-      cb(new Error('仅支持 .in / .out / .ans / .zip 文件'))
-    }
-  },
-})
-app.post('/api/problems/:id/test-cases/upload', authenticate, authorize('admin', 'teacher'), testcaseUpload.array('files', 100), (req, res, next) => {
-  import('./controllers/testcase.controller').then(tc => tc.uploadTestCases(req, res, next))
-})
+app.post('/api/problems/:id/test-cases/upload', authenticate, authorize('admin', 'teacher'), testcaseUpload.array('files', 100), testcaseController.uploadTestCases)
 app.use('/api/admin', adminRoutes)
 
 // 公开统计接口
 app.get('/api/stats', adminController.getPublicStats)
-
-// User submission trend & difficulty stats (requires auth)
-app.get('/api/stats/submission-trend', authenticate, async (req: any, res: any, next: any) => {
-  try {
-    const userId = req.userId
-    const result = await query(
-      `SELECT DATE(created_at) as date, COUNT(*) as total,
-              COUNT(*) FILTER (WHERE status = 'accepted') as accepted
-       FROM submissions
-       WHERE user_id = $1 AND created_at >= NOW() - INTERVAL '30 days'
-       GROUP BY DATE(created_at) ORDER BY date`,
-      [userId]
-    )
-    res.json({ success: true, data: result.rows.map((r: any) => ({ ...r, total: parseInt(r.total), accepted: parseInt(r.accepted) })) })
-  } catch (err) { next(err) }
-})
-
-app.get('/api/stats/difficulty-distribution', authenticate, async (req: any, res: any, next: any) => {
-  try {
-    const userId = req.userId
-    const result = await query(
-      `SELECT p.difficulty, COUNT(DISTINCT s.problem_id) as solved
-       FROM submissions s
-       JOIN problems p ON s.problem_id = p.id
-       WHERE s.user_id = $1 AND s.status = 'accepted'
-       GROUP BY p.difficulty`,
-      [userId]
-    )
-    res.json({ success: true, data: result.rows })
-  } catch (err) { next(err) }
-})
-
-app.get('/api/stats/admin-trend', authenticate, authorize('admin', 'teacher'), async (req: any, res: any, next: any) => {
-  try {
-    const [submissionTrend, userTrend] = await Promise.all([
-      query(
-        `SELECT DATE(created_at) as date, COUNT(*) as total
-         FROM submissions WHERE created_at >= NOW() - INTERVAL '7 days'
-         GROUP BY DATE(created_at) ORDER BY date`
-      ),
-      query(
-        `SELECT DATE(created_at) as date, COUNT(*) as total
-         FROM users WHERE created_at >= NOW() - INTERVAL '7 days'
-         GROUP BY DATE(created_at) ORDER BY date`
-      ),
-    ])
-    res.json({
-      success: true,
-      data: {
-        submissions: submissionTrend.rows.map((r: any) => ({ ...r, total: parseInt(r.total) })),
-        users: userTrend.rows.map((r: any) => ({ ...r, total: parseInt(r.total) })),
-      },
-    })
-  } catch (err) { next(err) }
-})
-
-// 创建上传目录
-const uploadsDir = path.join(process.cwd(), 'uploads', 'courses')
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true })
-}
-
-// 文件上传路由
-app.post('/api/materials/upload', authenticate, upload.single('file'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({
-      success: false,
-      error: { message: '没有上传文件' }
-    })
-  }
-
-  const fileUrl = `/uploads/courses/${req.file.filename}`
-
-  res.json({
-    success: true,
-    data: {
-      fileUrl,
-      fileName: req.file.originalname,
-      fileSize: req.file.size,
-      mimeType: req.file.mimetype
-    }
-  })
-})
 
 app.use(notFoundHandler)
 app.use(errorHandler)
