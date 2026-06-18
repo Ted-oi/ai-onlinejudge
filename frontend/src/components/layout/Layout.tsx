@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Layout as AntLayout, Menu, Avatar, Dropdown, Space, Button } from 'antd'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -19,6 +19,8 @@ import {
   CompassOutlined,
   TeamOutlined,
   ExperimentOutlined,
+  CalendarOutlined,
+  FlagOutlined,
 } from '@ant-design/icons'
 import NotificationCenter from '../common/NotificationCenter'
 import ThemeSwitcher, { useTheme } from '../common/ThemeSwitcher'
@@ -39,23 +41,83 @@ const Layout = () => {
 
   const menuItems = [
     { key: '/', icon: <HomeOutlined />, label: '首页' },
-    { key: '/problems', icon: <CodeOutlined />, label: '题库' },
-    { key: '/problem-sets', icon: <UnorderedListOutlined />, label: '题单' },
-    { key: '/articles', icon: <ReadOutlined />, label: '博客/题解' },
-    { key: '/code-shares', icon: <ShareAltOutlined />, label: '代码分享' },
-    { type: 'divider' as const },
-    { key: '/contests', icon: <TrophyOutlined />, label: '比赛' },
-    { key: '/leaderboard', icon: <CrownOutlined />, label: '排行榜' },
-    { key: '/courses', icon: <BookOutlined />, label: '课程' },
-    { key: '/learning-paths', icon: <CompassOutlined />, label: '学习路径' },
-    { key: '/teams', icon: <TeamOutlined />, label: '团队/班级' },
-    { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
-    { key: '/playground', icon: <ExperimentOutlined />, label: 'Playground' },
-    { key: '/submissions', icon: <ThunderboltOutlined />, label: '提交记录' },
+    {
+      key: 'group-practice', icon: <BookOutlined />, label: '学习',
+      children: [
+        { key: '/problems', icon: <CodeOutlined />, label: '题库' },
+        { key: '/problem-sets', icon: <UnorderedListOutlined />, label: '题单' },
+        { key: '/learning-paths', icon: <CompassOutlined />, label: '学习路径' },
+        { key: '/courses', icon: <BookOutlined />, label: '课程' },
+        { key: '/submissions', icon: <ThunderboltOutlined />, label: '提交记录' },
+      ],
+    },
+    {
+      key: 'group-competition', icon: <TrophyOutlined />, label: '竞技',
+      children: [
+        { key: '/contests', icon: <TrophyOutlined />, label: '比赛' },
+        { key: '/leaderboard', icon: <CrownOutlined />, label: '排行榜' },
+        { key: '/teams', icon: <TeamOutlined />, label: '团队/班级' },
+      ],
+    },
+    {
+      key: 'group-community', icon: <TeamOutlined />, label: '社区',
+      children: [
+        { key: '/articles', icon: <ReadOutlined />, label: '博客/题解' },
+        { key: '/code-shares', icon: <ShareAltOutlined />, label: '代码分享' },
+        { key: '/friends', icon: <TeamOutlined />, label: '好友' },
+      ],
+    },
+    {
+      key: 'group-tools', icon: <RobotOutlined />, label: '助手',
+      children: [
+        { key: '/ai', icon: <RobotOutlined />, label: 'AI助手' },
+        { key: '/playground', icon: <ExperimentOutlined />, label: 'Playground' },
+      ],
+    },
+    {
+      key: 'group-me', icon: <UserOutlined />, label: '我的',
+      children: [
+        { key: '/checkin', icon: <CalendarOutlined />, label: '每日签到' },
+        { key: '/my-reports', icon: <FlagOutlined />, label: '我的反馈' },
+      ],
+    },
     ...(user.role === 'admin' || user.role === 'teacher'
       ? [{ type: 'divider' as const }, { key: '/admin', icon: <SettingOutlined />, label: '管理后台' }]
       : []),
   ].filter(Boolean)
+
+  // 路由前缀 → 子菜单组：用于根据当前路径自动展开对应的组
+  const routeToGroup: Record<string, string> = {
+    '/problems': 'group-practice',
+    '/problem-sets': 'group-practice',
+    '/learning-paths': 'group-practice',
+    '/courses': 'group-practice',
+    '/submissions': 'group-practice',
+    '/contests': 'group-competition',
+    '/leaderboard': 'group-competition',
+    '/teams': 'group-competition',
+    '/articles': 'group-community',
+    '/code-shares': 'group-community',
+    '/friends': 'group-community',
+    '/ai': 'group-tools',
+    '/playground': 'group-tools',
+    '/checkin': 'group-me',
+    '/my-reports': 'group-me',
+  }
+
+  const currentPathKey = '/' + location.pathname.split('/')[1]
+  const [openKeys, setOpenKeys] = useState<string[]>(() => {
+    const g = routeToGroup[currentPathKey]
+    return g ? [g] : []
+  })
+
+  // 切换路由时自动展开对应组（不主动收起用户已经展开的其它组）
+  useEffect(() => {
+    const g = routeToGroup[currentPathKey]
+    if (g && !openKeys.includes(g)) {
+      setOpenKeys(prev => [...prev, g])
+    }
+  }, [currentPathKey])
 
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: '个人中心', onClick: () => navigate(`/users/${user.id}`) },
@@ -69,6 +131,8 @@ const Layout = () => {
   }
 
   const handleMenuClick = (key: string) => {
+    // 父级组 key（group-xxx）不是路由，跳过
+    if (!key.startsWith('/')) return
     navigate(key)
     if (window.innerWidth < 768) setCollapsed(true)
   }
@@ -126,7 +190,9 @@ const Layout = () => {
         </div>
         <Menu
           mode="inline"
-          selectedKeys={['/' + location.pathname.split('/')[1]]}
+          openKeys={openKeys}
+          onOpenChange={(keys) => setOpenKeys(keys)}
+          selectedKeys={[currentPathKey]}
           items={menuItems}
           onClick={({ key }) => handleMenuClick(key)}
           style={{

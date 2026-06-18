@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Button, Tag, Typography, Space, message } from 'antd'
-import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, ShareAltOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CheckCircleOutlined, CloseCircleOutlined, LoadingOutlined, ShareAltOutlined, SwapOutlined } from '@ant-design/icons'
 import ReactSyntaxHighlighter from 'react-syntax-highlighter'
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs'
 import { submissionService } from '../../services/submission.service'
@@ -182,6 +182,9 @@ const SubmissionDetail = () => {
                 分享代码
               </Button>
             )}
+            <Button icon={<SwapOutlined />} onClick={() => navigate(`/submissions/compare/${submission.id}`)}>
+              对比版本
+            </Button>
           </Space>
         </div>
 

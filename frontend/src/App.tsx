@@ -61,6 +61,11 @@ const TeamDetail = React.lazy(() => import('./pages/teams/TeamDetail'))
 const CreateTeam = React.lazy(() => import('./pages/teams/CreateTeam'))
 const NotFoundPage = React.lazy(() => import('./components/common/NotFoundPage'))
 const Playground = React.lazy(() => import('./pages/playground/Playground'))
+const Checkin = React.lazy(() => import('./pages/checkin/Checkin'))
+const Friends = React.lazy(() => import('./pages/friends/Friends'))
+const ReportList = React.lazy(() => import('./pages/reports/ReportList'))
+const SubmissionCompare = React.lazy(() => import('./pages/submissions/SubmissionCompare'))
+const AdminReportReview = React.lazy(() => import('./pages/admin/AdminReportReview'))
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = localStorage.getItem('token')
@@ -116,6 +121,8 @@ function ThemedApp() {
             <Route path="problems/:id/answer" element={<LazyPage><ObjectiveSubmit /></LazyPage>} />
             <Route path="submissions" element={<LazyPage><SubmissionList /></LazyPage>} />
             <Route path="submissions/:id" element={<LazyPage><SubmissionDetail /></LazyPage>} />
+            <Route path="submissions/compare/:id1" element={<LazyPage><SubmissionCompare /></LazyPage>} />
+            <Route path="submissions/compare/:id1/:id2" element={<LazyPage><SubmissionCompare /></LazyPage>} />
             <Route path="courses" element={<LazyPage><CourseList /></LazyPage>} />
             <Route path="courses/:id" element={<LazyPage><CourseDetail /></LazyPage>} />
             <Route path="leaderboard" element={<LazyPage><Leaderboard /></LazyPage>} />
@@ -125,6 +132,9 @@ function ThemedApp() {
             <Route path="contests/:id" element={<LazyPage><ContestDetail /></LazyPage>} />
             <Route path="ai" element={<LazyPage><AiChat /></LazyPage>} />
             <Route path="playground" element={<LazyPage><Playground /></LazyPage>} />
+            <Route path="checkin" element={<LazyPage><Checkin /></LazyPage>} />
+            <Route path="friends" element={<LazyPage><Friends /></LazyPage>} />
+            <Route path="my-reports" element={<LazyPage><ReportList /></LazyPage>} />
             <Route path="users/:id" element={<LazyPage><UserProfile /></LazyPage>} />
             <Route path="users/:id/settings" element={<LazyPage><UserSettings /></LazyPage>} />
             <Route path="discussions/problem/:problemId" element={<LazyPage><DiscussionList /></LazyPage>} />
@@ -169,6 +179,7 @@ function ThemedApp() {
             <Route path="code-shares" element={<LazyPage><AdminCodeShareList /></LazyPage>} />
             <Route path="teams" element={<LazyPage><AdminTeamList /></LazyPage>} />
             <Route path="learning-paths" element={<LazyPage><AdminLearningPathForm /></LazyPage>} />
+            <Route path="problem-reports" element={<LazyPage><AdminReportReview /></LazyPage>} />
           </Route>
         </Routes>
       </BrowserRouter>

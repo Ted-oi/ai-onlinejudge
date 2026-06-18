@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Card, Descriptions, Button, Typography, Tag, Tabs, Space, message, Row, Col } from 'antd'
-import { ArrowLeftOutlined, CodeOutlined, MessageOutlined, FileTextOutlined } from '@ant-design/icons'
+import { ArrowLeftOutlined, CodeOutlined, MessageOutlined, FileTextOutlined, FlagOutlined } from '@ant-design/icons'
 import { problemService } from '../../services/problem.service'
 import type { Problem } from '../../types'
 import ReactMarkdown from 'react-markdown'
@@ -15,6 +15,7 @@ import SmartHint from '../../components/problems/SmartHint'
 import ProblemRecommendation from '../../components/problems/ProblemRecommendation'
 import DiscussionList from '../discussions/DiscussionList'
 import ArticleList from '../articles/ArticleList'
+import { ReportModal } from '../reports/ReportList'
 import LoadingSkeleton from '../../components/common/LoadingSkeleton'
 
 const { Title, Text } = Typography
@@ -24,6 +25,7 @@ const ProblemDetail = () => {
   const navigate = useNavigate()
   const [problem, setProblem] = useState<Problem | null>(null)
   const [loading, setLoading] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const canManage = user.role === 'admin' || user.role === 'teacher'
@@ -183,6 +185,7 @@ const ProblemDetail = () => {
         <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/problems')}>返回列表</Button>
         <Button type="primary" icon={<CodeOutlined />} onClick={handleSolve}>开始解题</Button>
         <FavoriteButton problemId={Number(id)} />
+        <Button icon={<FlagOutlined />} onClick={() => setReportOpen(true)}>纠错反馈</Button>
       </Space>
 
       <Row gutter={16}>
@@ -204,6 +207,13 @@ const ProblemDetail = () => {
           <ProblemRecommendation />
         </Col>
       </Row>
+
+      <ReportModal
+        open={reportOpen}
+        problemId={problem.id}
+        problemTitle={problem.title}
+        onClose={() => setReportOpen(false)}
+      />
     </div>
   )
 }

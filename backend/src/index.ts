@@ -29,6 +29,9 @@ import teamRoutes from './routes/team.routes'
 import testgenRoutes from './routes/testgen.routes'
 import playgroundRoutes from './routes/playground.routes'
 import statsRoutes from './routes/stats.routes'
+import checkinRoutes from './routes/checkin.routes'
+import problemReportRoutes from './routes/problemReport.routes'
+import friendRoutes from './routes/friendship.routes'
 import * as adminController from './controllers/admin.controller'
 import * as userController from './controllers/user.controller'
 import * as testcaseController from './controllers/testcase.controller'
@@ -96,6 +99,9 @@ app.use('/api/learning-paths', learningPathRoutes)
 app.use('/api/teams', teamRoutes)
 app.use('/api/playground', playgroundRoutes)
 app.use('/api/stats', statsRoutes)
+app.use('/api/checkin', checkinRoutes)
+app.use('/api/problem-reports', problemReportRoutes)
+app.use('/api/friends', friendRoutes)
 
 // AI test case generation
 app.use('/api/problems/:id/generate-test-cases', testgenRoutes)

@@ -57,11 +57,30 @@ async function initializeDatabase() {
     }
 
     initialized = true
+
+    await runMigrations(client)
   } catch (error) {
     logger.error('Failed to initialize database', error)
     throw error
   } finally {
     client.release()
+  }
+}
+
+async function runMigrations(client: any) {
+  const migrationsDir = path.join(__dirname, '..', '..', '..', 'docker', 'migrations')
+  if (!fs.existsSync(migrationsDir)) return
+
+  const files = fs.readdirSync(migrationsDir).filter(f => f.endsWith('.sql')).sort()
+  for (const file of files) {
+    try {
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8')
+      await client.query(sql)
+      logger.info(`Applied migration: ${file}`)
+    } catch (err) {
+      logger.error(`Migration failed: ${file}`, err)
+      throw err
+    }
   }
 }
 
