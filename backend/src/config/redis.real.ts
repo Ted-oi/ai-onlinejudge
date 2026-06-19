@@ -6,14 +6,32 @@ let client: RedisClientType | null = null
 export async function connect(): Promise<void> {
   client = createClient({
     url: process.env.REDIS_URL || 'redis://localhost:6379',
+    socket: {
+      // 初次连接失败时不要无限重连（重连由上层 fallback 处理）
+      reconnectStrategy: (retries) => {
+        if (retries >= 3) return false
+        return Math.min(retries * 100, 500)
+      },
+    },
   }) as RedisClientType
 
   client.on('error', (err) => {
-    logger.error('Redis client error', err)
+    logger.warn('Redis client error', { message: err.message })
   })
 
-  await client.connect()
-  logger.info('Redis connected successfully')
+  try {
+    await client.connect()
+    logger.info('Redis connected successfully')
+  } catch (error) {
+    // 连接失败 → 必须销毁 client，否则它会继续重连并不断触发 error 事件
+    try {
+      await client.disconnect()
+    } catch {
+      // ignore
+    }
+    client = null
+    throw error
+  }
 }
 
 export async function get(key: string): Promise<string | null> {
